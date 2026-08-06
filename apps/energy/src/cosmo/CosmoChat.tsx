@@ -429,6 +429,11 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
   /** Did this mission stream a `message` event? If so the completion capsule
    *  must not restate the result -- see the 'done' handler. */
   const sawMessageRef = useRef(false);
+  /** Seconds the current agent turn has been running. Real elapsed time, shown
+   *  because a 9-16 second wait with no feedback reads as a broken app -- and
+   *  because a counter that ticks is the one honest thing we can say while the
+   *  answer is still being assembled. */
+  const [askElapsed, setAskElapsed] = useState(0);
   /** The source the reader tapped, shown in a preview sheet before they leave.
    *
    *  Deliberately NOT an iframe. Instagram and LinkedIn use a native in-app
@@ -570,6 +575,13 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
   });
 
   useEffect(() => { if (bridge.status === 'open') setBridgeDialogOpen(false); }, [bridge.status]);
+
+  useEffect(() => {
+    if (!agent.busy) { setAskElapsed(0); return; }
+    const started = Date.now();
+    const iv = setInterval(() => setAskElapsed(Math.round((Date.now() - started) / 1000)), 250);
+    return () => clearInterval(iv);
+  }, [agent.busy]);
 
   // Keep the chat panel pinned to the VISIBLE area, not the layout viewport.
   // On iOS the software keyboard does not shrink the layout viewport, so a
@@ -992,7 +1004,7 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
                             ? { ...x, bridge: { ...x.bridge, resolved: ok ? 'approved' : 'denied' } } : x)));
                         }} renderMarkdown={mdToHtml} />
                       : m.card
-                        ? (<>
+                        ? (<div className="ag-arrive">
                           {m.text && <div dangerouslySetInnerHTML={{ __html: mdToHtml(m.text) }} />}
                           <AgentCard card={m.card} onChip={onChip} />
                           {m.card.artifact && (
@@ -1000,7 +1012,7 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
                           )}
                           {m.summary && <p className="ag-summary">{m.summary}</p>}
                           {m.trace && <AgentTrace trace={m.trace} />}
-                        </>)
+                        </div>)
                         : m.text
                           ? (<>
                             <div dangerouslySetInnerHTML={{ __html: mdToHtml(m.text) + (m.done ? '' : '<span class="cc-caret"></span>') }} />
@@ -1072,6 +1084,26 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
                       className="src-sheet-copy"
                       onClick={() => { void navigator.clipboard?.writeText(sourceSheet.url); setSourceSheet(null); }}
                     >Copy link</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {brain === 'agent' && agent.busy && (
+              <div className="msg assistant">
+                <div className="who">ARGANTA</div>
+                <div className="bub">
+                  <div className="ag-working">
+                    <span className="ag-working-orb" aria-hidden />
+                    <span className="ag-working-text">
+                      {/* Says only what is true. The catalogue is local and
+                          instant; the wait is the model choosing a tool, and
+                          when no model is configured there is no model to wait
+                          for -- so the two cases read differently. */}
+                      {agent.workerConfigured
+                        ? 'Reading the catalogue and choosing what to open'
+                        : 'Matching against the catalogue'}
+                    </span>
+                    {askElapsed >= 2 && <span className="ag-working-secs">{askElapsed}s</span>}
                   </div>
                 </div>
               </div>

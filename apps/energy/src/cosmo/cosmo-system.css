@@ -1298,3 +1298,52 @@ html[data-ui="cosmo"] .app.rail-pinned .rail-btn{margin-left:0}
 .ca-log-bg{ fill:rgba(127,127,127,.05); }
 .dark .ca-log-bg{ fill:rgba(255,255,255,.04); }
 .ca-log-curve{ fill:none; stroke-width:1.1; vector-effect:non-scaling-stroke; }
+
+/* ── the agent working, and the answer arriving ─────────────────────────────
+   A Core turn takes 9-16s because the loop makes several model round-trips.
+   With no feedback at all that reads as a broken app, so the wait gets a
+   presence — but a HONEST one. No invented step names, no fake progress bar
+   marching toward a total nobody knows: an orb that breathes, one true
+   sentence, and a real elapsed counter once the wait is long enough to notice. */
+.ag-working{ display:flex; align-items:center; gap:9px; padding:2px 0; }
+.ag-working-orb{
+  flex:0 0 auto; width:9px; height:9px; border-radius:50%;
+  background:radial-gradient(circle at 32% 30%, #7dd3fc, #0ea5e9 62%, #0369a1);
+  box-shadow:0 0 0 0 rgba(14,165,233,.42);
+  animation:ag-breathe 1.9s ease-in-out infinite;
+}
+.ag-working-text{
+  font-size:12px; color:var(--ink-dim,#6b7280);
+  background:linear-gradient(90deg,
+    var(--ink-dim,#6b7280) 0%, var(--ink-dim,#6b7280) 38%,
+    var(--ink,#111827) 50%,
+    var(--ink-dim,#6b7280) 62%, var(--ink-dim,#6b7280) 100%);
+  background-size:220% 100%;
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent;
+  animation:ag-sheen 2.6s linear infinite;
+}
+.ag-working-secs{
+  margin-left:auto; font-size:10.5px; font-variant-numeric:tabular-nums;
+  color:var(--ink-dim,#6b7280); opacity:.7;
+}
+@keyframes ag-breathe{
+  0%,100%{ transform:scale(1);   box-shadow:0 0 0 0 rgba(14,165,233,.40) }
+  50%    { transform:scale(1.18); box-shadow:0 0 0 6px rgba(14,165,233,0) }
+}
+@keyframes ag-sheen{ from{ background-position:120% 0 } to{ background-position:-120% 0 } }
+
+/* The answer settles in rather than snapping. Card first, then the sentence
+   under it, then the receipt — the order a person reads them in. */
+.ag-arrive{ animation:ag-rise .32s cubic-bezier(.22,.9,.3,1) both; }
+.ag-arrive .ag-summary{ animation:ag-rise .32s cubic-bezier(.22,.9,.3,1) .09s both; }
+.ag-arrive .ag-trace{ animation:ag-rise .32s cubic-bezier(.22,.9,.3,1) .16s both; }
+.ag-arrive .chat-artifact{ animation:ag-rise .34s cubic-bezier(.22,.9,.3,1) .13s both; }
+@keyframes ag-rise{ from{ opacity:0; transform:translateY(6px) } to{ opacity:1; transform:none } }
+
+/* Motion is decoration here; the information is in the words and the counter. */
+@media (prefers-reduced-motion:reduce){
+  .ag-working-orb{ animation:none }
+  .ag-working-text{ animation:none; -webkit-text-fill-color:currentColor; background:none }
+  .ag-arrive, .ag-arrive .ag-summary, .ag-arrive .ag-trace, .ag-arrive .chat-artifact{ animation:none }
+}
