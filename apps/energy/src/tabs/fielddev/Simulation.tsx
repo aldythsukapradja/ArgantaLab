@@ -290,6 +290,9 @@ export function Simulation({ field }: { field: SearchEntry }) {
             activeCol: Uint8Array.from(co.grid.activeCol as ArrayLike<number>),
             phi: Float64Array.from(out.build.cfg.phi as ArrayLike<number>),
             dz: out.build.meanH,
+            // the streamline overlay drapes on this; without it, it drapes flat
+            topZ: Float64Array.from(co.grid.topZ as ArrayLike<number>),
+            baseZ: Float64Array.from(co.grid.baseZ as ArrayLike<number>),
           },
           coarseFactor: co.factor,
           times: out.result.snapshots.map((x) => x.t),

@@ -93,7 +93,26 @@ function SkyColor({ color }: { color: string }) {
   return null;
 }
 
-export function GeaStudio({ ws, onStats }: { ws: Workspace; onStats?: (s: StudioStats) => void }) {
+/**
+ * The transform a caller needs to place its own geometry in this scene.
+ *
+ * Handed out rather than published as a constant because the frame depends on which
+ * surfaces are loaded: an overlay that hard-codes an origin drifts the moment the
+ * horizon selection changes, and the drift is silent — the lines simply sit somewhere
+ * plausible and wrong.
+ */
+export interface SceneFrame {
+  originX: number; originY: number;
+  /** vertical exaggeration already applied by the viewport */
+  zScale: number;
+}
+
+export function GeaStudio({ ws, onStats, overlay }: {
+  ws: Workspace;
+  onStats?: (s: StudioStats) => void;
+  /** extra geometry drawn INSIDE the scene group, in the scene's own frame */
+  overlay?: (f: SceneFrame) => React.ReactNode;
+}) {
   const visible = useStatic((s) => s.visibleHorizons);
   const zScale = useStatic((s) => s.zScale);
   // the packed property arrays are rewritten IN PLACE, so identity never changes —
@@ -541,6 +560,10 @@ export function GeaStudio({ ws, onStats }: { ws: Workspace; onStats?: (s: Studio
         <FpsProbe onFps={setFps} />
 
         <group position={[-frame.spanX / 2, -frame.spanY / 2, -frame.midZ]}>
+          {/* a caller's own geometry, in the SAME frame as the grid and the well
+              paths — this is what lets the Streamline surface reuse this viewport
+              rather than standing up a second 3D scene that can disagree with it */}
+          {overlay?.({ originX: frame.origin.x, originY: frame.origin.y, zScale })}
           {/* the built 3D grid, drawn as its SHELL — 10 million cells have only a few
               hundred thousand visible faces, and the interior is never a face */}
           {/* When the player is on, the SHELL IS HIDDEN. The shell is the outer skin of

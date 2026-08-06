@@ -48,6 +48,15 @@ export interface StoredRun {
     phi: Float64Array;
     /** mean gross thickness of the flow layer, m */
     dz: number;
+    /**
+     * Structure of the flow layer, per column.
+     *
+     * Optional because runs saved before this existed have none. A consumer that
+     * cannot find it must drape flat AND SAY SO, rather than draping flat while
+     * implying it followed the structure.
+     */
+    topZ?: Float64Array;
+    baseZ?: Float64Array;
   };
   /** how much coarser than the geological grid, so frames can be expanded back */
   coarseFactor: number;

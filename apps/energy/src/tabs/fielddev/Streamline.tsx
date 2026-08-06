@@ -20,11 +20,18 @@ import { indexedDbRunStore, type StoredRun } from './run-store';
 import { geomOf, wellCellsOf, drainage, tofStats, thin } from './streamlines';
 import { traceStreamlines, type StreamResult } from '../../engine/sim/streamline';
 import { useThemeInk } from './theme-ink';
+import { GeaStudio } from './GeaStudio';
+import { StreamlineLayer } from './StreamlineLayer';
 import { useWorkspace } from './workspace';
 import type { SearchEntry } from '../../cosmo/cockpit-search';
 
 const VIEWS: StudioView[] = [
-  { id: 'map', label: 'Drainage map', hint: 'Streamlines from every injector, coloured by the producer they reach' },
+  // The drainage map IS the 3D one: streamlines only mean something read against the
+  // structure they are flowing through, and a flat map throws that away. The 2D plan
+  // stays because a plan view is the right shape for judging PATTERN — spacing,
+  // symmetry, gaps — which perspective distorts.
+  { id: '3d', label: 'Drainage', hint: 'The drainage map, in the same 3D viewport as the grid, structure and well trajectories' },
+  { id: 'map', label: 'Plan view', hint: 'The same streamlines from directly above — the right shape for judging pattern and spacing' },
   { id: 'allocation', label: 'Allocation', hint: 'Which injector supports which producer, and how much is lost' },
   { id: 'tof', label: 'Time of flight', hint: 'How long injected water takes to arrive' },
 ];
@@ -35,12 +42,16 @@ const hueFor = (i: number) => `hsl(${(i * 61 + 18) % 360} 72% 58%)`;
 export function Streamline({ field }: { field: SearchEntry }) {
   const { ws, ready } = useWorkspace();
   const ink = useThemeInk();
-  const [view, setView] = useState('map');
+  const [view, setView] = useState('3d');
   const [run, setRun] = useState<StoredRun | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [stepIx, setStepIx] = useState<number | null>(null);
-  const [perInj, setPerInj] = useState(24);
-  const [maxDraw, setMaxDraw] = useState(400);
+  // Denser than the tracer's own default of 24. A waterflood's drainage pattern is a
+  // FAN, and a fan drawn with two dozen lines reads as a handful of arbitrary paths;
+  // it takes a few hundred before the shape of the sweep — and the gaps in it — become
+  // the thing you see. Cost is linear and the tracing is milliseconds.
+  const [perInj, setPerInj] = useState(96);
+  const [maxDraw, setMaxDraw] = useState(2400);
 
   // the SAME record the Simulation wrote. v0, always — one grid for the vertical.
   useEffect(() => {
@@ -151,8 +162,8 @@ export function Streamline({ field }: { field: SearchEntry }) {
           <span className="sim3d-t">day {run.times[ix]?.toFixed(0)}</span>
           <label title="Streamlines seeded per injector — more resolves the pattern, fewer draws faster">
             per inj
-            <input type="number" min={4} max={96} step={4} value={perInj}
-              onChange={(e) => setPerInj(Math.max(4, Math.min(96, Number(e.target.value) || 24)))} />
+            <input type="number" min={4} max={256} step={8} value={perInj}
+              onChange={(e) => setPerInj(Math.max(4, Math.min(256, Number(e.target.value) || 96)))} />
           </label>
         </span>
       )}
@@ -164,6 +175,28 @@ export function Streamline({ field }: { field: SearchEntry }) {
             is stored — this surface traces that run rather than solving its own, so the
             drainage and the saturation animation always describe the same flood.
           </Blank>
+        )
+        : view === '3d' ? (
+          <div className="sim3d">
+            <div className="sim3d-canvas">
+              {/* THE SAME VIEWPORT. Not a second 3D scene beside it: the lines have to
+                  be read against the structure, the grid and the trajectories, and two
+                  canvases can disagree about camera, exaggeration and origin without
+                  anything on screen saying so. */}
+              <GeaStudio ws={ws} onStats={() => {}}
+                overlay={(f) => (traced ? (
+                  <StreamlineLayer frame={f} run={run} lines={thin(traced, maxDraw).lines}
+                    colourOf={colourOf} maxTof={traced.maxTof} />
+                ) : null)} />
+            </div>
+            <p className="sim-note">
+              Drawn in the Static Model's own viewport, so the drainage is read against
+              the grid and the well paths. Colour is the producer a line reaches; grey
+              reaches nobody. Faster paths are drawn brighter — they are the ones that
+              control breakthrough.
+              {!run.grid.topZ && ' This run carries no structure, so the lines are draped flat.'}
+            </p>
+          </div>
         )
         : view === 'map' ? (
           <MapPane run={run} traced={traced} colourOf={colourOf} ink={ink}
