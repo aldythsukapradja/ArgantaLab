@@ -292,21 +292,41 @@ const HISTORY_CHARS = 6000;
  *  looking and for anything running outside a mission. */
 function appState(): string {
   const st = getCockpitState();
-  if (!st) return '';
+  const paths = [
+    'You CAN see and drive this app. The bridge is built and running:',
+    '  read   apps/energy/.agent/live-state.json   — what is on screen now',
+    '  write  apps/energy/.agent/commands.json     — an AgentCommand[] to navigate',
+    '         ops: scope | view | map | clear. See apps/energy/.agent/README.md.',
+  ];
+
+  // NEVER return empty. An absent snapshot previously emitted nothing at all,
+  // and an agent reading a mission with no state block concluded — reasonably —
+  // that no such mechanism existed, then said so with total confidence while
+  // the live file sat beside it. Missing DATA must not read as a missing
+  // FEATURE, so the capability is stated either way and only the values differ.
+  if (!st) {
+    return [
+      ...paths,
+      '',
+      'No live snapshot reached this message. Read the file directly rather than',
+      'assuming the app is unreachable, and say what you found.',
+    ].join('\n');
+  }
+
   const scope = Object.entries(st.scope ?? {})
     .filter(([, v]) => v)
     .map(([k, v]) => `${k}=${v}`)
     .join(', ');
   return [
-    'What the operator is looking at RIGHT NOW in ArgantaEnergy (live, read from',
-    'the running app — trust this over anything earlier in this transcript):',
-    `- surface: ${st.nav ?? 'unknown'}${st.mode ? ` (${st.mode})` : ''}`,
-    scope ? `- scope: ${scope}` : '- scope: nothing selected',
-    st.breadcrumb ? `- subject: ${st.breadcrumb}` : '',
+    'What the operator is looking at RIGHT NOW (live, read from the running app —',
+    'trust this over anything earlier in this transcript, which may describe this',
+    'bridge as unbuilt from before it existed):',
+    `  surface: ${st.nav ?? 'unknown'}${st.mode ? ` (${st.mode})` : ''}`,
+    scope ? `  scope: ${scope}` : '  scope: nothing selected',
+    st.breadcrumb ? `  subject: ${st.breadcrumb}` : '',
+    `  as of: ${st.at}`,
     '',
-    'The same state is on disk at apps/energy/.agent/live-state.json, and writing',
-    'an AgentCommand array to apps/energy/.agent/commands.json navigates the app',
-    '(ops: scope | view | map | clear). See .agent/README.md.',
+    ...paths,
   ].filter(Boolean).join('\n');
 }
 
@@ -316,11 +336,7 @@ function withHistory(msgs: Msg[], text: string): string {
     .slice(-HISTORY_TURNS)
     .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${(m.text || '').trim()}`);
   const state = appState();
-  if (!prior.length) return state ? `${state}
-
----
-
-${text}` : text;
+  if (!prior.length) return `${state}\n\n---\n\n${text}`;
 
   // Newest turns matter most, so drop from the FRONT when trimming.
   let body = prior.join('\n\n');
