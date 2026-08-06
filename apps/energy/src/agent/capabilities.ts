@@ -98,6 +98,17 @@ function alsoAvailable(node: GazIndexed, exclude: string, limit = 4): CardChip[]
   return out;
 }
 
+/** The KB entity id the figure links are keyed on.
+ *
+ *  A node carries several native ids -- a USGS province and an ATLAS basin are
+ *  one place here, so both are kept (see the gazetteer's sameAs handling). The
+ *  figure registry links on the BASIN id specifically, so pick that one rather
+ *  than whichever happens to be first. Returns undefined when the node has no
+ *  basin identity, and the caller omits the artifact instead of mounting it
+ *  empty. */
+const kbBasinId = (node: GazIndexed): string | undefined =>
+  (node.nativeIds ?? []).find((id) => id.startsWith('atlas:basin:'));
+
 /** Set scope at the level this node fills, letting the brain fill ancestors. */
 function scopeTo(node: GazIndexed): AgentCommand[] {
   const level = levelForKind(node.kind);
@@ -370,6 +381,14 @@ export const CAPABILITIES: Capability[] = [
       ],
       chips: alsoAvailable(n, 'basin.figures'),
       provenance: prov(n),
+      // The figures themselves, in the answer. Telling a reader a basin has 5
+      // public-domain figures and then not showing them is the half-answer this
+      // artifact exists to close. `nativeId` is the KB entity the figure links
+      // are keyed on; without it there is nothing to look up, so the artifact is
+      // simply omitted rather than mounted empty.
+      ...(kbBasinId(n) ? {
+        artifact: { component: 'basin-figures', props: { entityId: kbBasinId(n), name: n.name } },
+      } : {}),
     }),
   },
   {

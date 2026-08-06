@@ -18,6 +18,7 @@ import { useAgent } from '../agent/useAgent';
 import { AgentCard } from '../agent/AgentCard';
 import { AgentTrace } from './AgentTrace.tsx';
 import { AgentWelcome } from './AgentWelcome.tsx';
+import { ChatArtifact } from './ChatArtifact.tsx';
 import type { TurnTrace } from '../agent/types.ts';
 import type { AnswerCard, CardChip } from '../agent/types';
 import { useBridge, type BridgeEngine } from '../agent/bridge/useBridge';
@@ -987,6 +988,9 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
                         ? (<>
                           {m.text && <div dangerouslySetInnerHTML={{ __html: mdToHtml(m.text) }} />}
                           <AgentCard card={m.card} onChip={onChip} />
+                          {m.card.artifact && (
+                            <ChatArtifact component={m.card.artifact.component} props={m.card.artifact.props} />
+                          )}
                           {m.summary && <p className="ag-summary">{m.summary}</p>}
                           {m.trace && <AgentTrace trace={m.trace} />}
                         </>)
