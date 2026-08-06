@@ -1,0 +1,414 @@
+/* Indonesia's Geological Legacy — keynote surface.
+   Scoped entirely under .kn-root: nothing here reaches the app, nothing in the
+   app reaches the deck. */
+
+.kn-root{
+  position:fixed;inset:0;z-index:9000;
+  display:flex;flex-direction:column;
+  overflow:hidden;                 /* one slide = one viewport, never scroll */
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
+  font-feature-settings:'kern' 1,'liga' 1,'calt' 1;
+  transition:background-color 1.4s cubic-bezier(.25,0,.15,1),color 1.4s cubic-bezier(.25,0,.15,1);
+}
+
+/* ── TYPE SYSTEM ──────────────────────────────────────────────────────────────
+   ONE modular scale (×1.28) anchored to the viewport. v1 used an ad-hoc clamp on
+   every element, which is precisely why it read as a document rather than as
+   something designed — no two sizes were related. Now every size is a step. */
+.kn-root{
+  --u: clamp(13px, .95vw, 19px);       /* base step */
+  --t-eyebrow: calc(var(--u) * .62);
+  --t-body:    calc(var(--u) * 1.00);
+  --t-lede:    calc(var(--u) * 1.62);
+  --t-punch:   calc(var(--u) * 2.62);
+  --t-title:   calc(var(--u) * 4.30);
+  --t-hero:    calc(var(--u) * 5.60);
+  /* Optical tracking: large type needs negative, tracked caps need generous. */
+  --track-tight:-.028em; --track-body:-.008em; --track-eyebrow:.34em;
+  --lh-tight:1.02; --lh-mid:1.18; --lh-body:1.55;
+  /* One rhythm unit; all vertical spacing is a multiple of it. */
+  --gap: clamp(14px, 1.5vw, 26px);
+  --pad: clamp(38px, 6.2vw, 132px);
+  font-family:'SF Pro Display','Inter var',Inter,Manrope,system-ui,-apple-system,'Segoe UI',sans-serif;
+  font-size:var(--t-body);
+}
+
+.kn-root.dark{
+  --bg:#050608; --surface:#0B1520;
+  --primary:#fff; --secondary:#B9C2CE;
+  --indonesia:#E53935; --geology:#D8B15A; --technology:#69D6FF;
+  --hairline:rgba(255,255,255,.10); --veil:rgba(255,255,255,.045);
+  --scrim:rgba(5,6,8,.72);
+  background:var(--bg);color:var(--primary);
+}
+.kn-root.light{
+  --bg:#F6F4EF; --surface:#fff;
+  --primary:#202124; --secondary:#5F6368;
+  --indonesia:#B03A36; --geology:#B88728; --technology:#17324A;
+  --hairline:rgba(32,33,36,.13); --veil:rgba(32,33,36,.04);
+  --scrim:rgba(246,244,239,.74);
+  background:var(--bg);color:var(--primary);
+}
+
+/* ── stage & alignment ───────────────────────────────────────────────────────
+   One max-width, one padding token. Every slide shares the same optical left
+   edge — the single change that most separates "premium" from "assembled". */
+.kn-stage{position:absolute;inset:0;display:grid;place-items:center}
+.kn-scene{position:relative;z-index:3;width:100%;max-width:1560px;padding:0 var(--pad);margin:0 auto}
+.kn-full{position:absolute;inset:0;display:grid;place-items:center}
+.kn-scene-inner{position:relative;z-index:3;width:100%;max-width:1560px;padding:0 var(--pad);margin:0 auto}
+.kn-center{position:relative;z-index:3;text-align:center;max-width:min(1180px,84vw);margin:0 auto}
+
+/* ── type roles ───────────────────────────────────────────────────────────── */
+.kn-eyebrow{font-size:var(--t-eyebrow);letter-spacing:var(--track-eyebrow);text-transform:uppercase;
+  font-weight:500;color:var(--secondary);opacity:.82;margin:0 0 calc(var(--gap)*1.4);
+  text-indent:var(--track-eyebrow)}          /* tracked caps read shifted right */
+.kn-title{font-size:var(--t-title);line-height:var(--lh-tight);letter-spacing:var(--track-tight);font-weight:600;margin:0}
+.kn-hero{font-size:var(--t-hero);line-height:.98;letter-spacing:-.034em;font-weight:600;margin:0}
+.kn-title .accent,.kn-hero .accent{color:var(--geology)}
+.kn-punch{font-size:var(--t-punch);line-height:var(--lh-mid);letter-spacing:-.022em;font-weight:600;max-width:17ch;margin:0}
+/* One step above punch, for the two slides that carry a single idea and nothing
+   else. Between --t-punch and --t-title, so it stays on the same scale. */
+.kn-mega{font-size:calc(var(--u)*3.35);line-height:1.06;letter-spacing:-.03em;font-weight:600;margin:0}
+.kn-lede{font-size:var(--t-lede);line-height:1.28;letter-spacing:-.014em;font-weight:450;max-width:20ch;margin:0}
+.kn-sub{font-size:var(--t-body);line-height:var(--lh-body);color:var(--secondary);font-weight:400;max-width:38ch;margin:var(--gap) 0 0}
+.kn-quiet{font-size:calc(var(--u)*.8);color:var(--secondary);opacity:.7;line-height:1.6;margin:0}
+.kn-mono{font-family:'JetBrains Mono','SF Mono',Consolas,monospace;font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
+
+/* SplitText scaffolding — each line rises out of its own mask. This is what
+   makes type feel authored instead of faded in. */
+.kn-line-mask{display:block;overflow:hidden;padding-bottom:.09em;margin-bottom:-.09em}
+
+/* ── chrome ──────────────────────────────────────────────────────────────── */
+.kn-chrome{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:20px;
+  padding:22px var(--pad);opacity:.14;transition:opacity .6s;z-index:30}
+.kn-root:hover .kn-chrome{opacity:.9}
+.kn-exit{padding:6px 13px;border:1px solid var(--hairline);border-radius:20px;background:transparent;
+  color:var(--secondary);font-size:calc(var(--u)*.62);letter-spacing:.12em;cursor:pointer;text-transform:uppercase;font-family:inherit}
+.kn-dots{display:flex;gap:10px;flex:1;justify-content:center}
+.kn-dot{width:6px;height:6px;padding:0;border:0;border-radius:50%;background:var(--hairline);
+  cursor:pointer;transition:transform .5s cubic-bezier(.16,1,.3,1),background .5s}
+.kn-dot.past{background:var(--secondary);opacity:.4}
+.kn-dot.on{background:var(--geology);transform:scale(2)}
+.kn-count{font-family:'JetBrains Mono',monospace;font-size:calc(var(--u)*.6);color:var(--secondary);letter-spacing:.16em}
+
+/* ── overview ────────────────────────────────────────────────────────────── */
+.kn-overview{position:absolute;inset:0;z-index:40;display:grid;place-items:center;padding:5vw;
+  background:var(--scrim);backdrop-filter:blur(26px)}
+.kn-overview-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;width:100%;max-width:1340px}
+.kn-ov-card{display:flex;flex-direction:column;gap:6px;padding:18px 16px;border:1px solid var(--hairline);
+  border-radius:16px;background:var(--veil);color:var(--primary);text-align:left;cursor:pointer;
+  transition:border-color .4s,transform .4s cubic-bezier(.16,1,.3,1);font-family:inherit}
+.kn-ov-card:hover{border-color:var(--geology);transform:translateY(-4px)}
+.kn-ov-card.on{border-color:var(--geology);background:color-mix(in srgb,var(--geology) 13%,transparent)}
+.kn-ov-num{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--geology);letter-spacing:.16em}
+.kn-ov-card b{font-size:13px;font-weight:600;line-height:1.28}
+.kn-ov-card em{font-size:10px;font-style:normal;color:var(--secondary)}
+
+/* ── presenter ───────────────────────────────────────────────────────────── */
+.kn-presenter{position:absolute;right:24px;bottom:70px;z-index:35;width:360px;padding:18px 20px;
+  border:1px solid var(--hairline);border-radius:18px;
+  background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(18px)}
+.kn-presenter header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:11px}
+.kn-presenter header b{font-size:13px}
+.kn-presenter header span{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--geology)}
+.kn-pres-punch{margin:0 0 10px;font-size:13px;line-height:1.5}
+.kn-pres-note{margin:0;font-size:11px;line-height:1.55;color:var(--secondary)}
+.kn-presenter footer{margin-top:12px;padding-top:10px;border-top:1px solid var(--hairline);
+  font-size:10px;color:var(--secondary);letter-spacing:.07em}
+
+/* ══ MAP — the real Cockpit renderer: Esri satellite + MapLibre v5 globe ═════ */
+.kn-map{position:absolute;inset:0;z-index:0}
+.kn-map>div{width:100%;height:100%}
+.kn-map .maplibregl-ctrl-top-right,.kn-map .maplibregl-ctrl-top-left,
+.kn-map .maplibregl-ctrl-bottom-left{display:none!important}
+.kn-map .maplibregl-ctrl-attrib{font-size:8px;opacity:.26;background:transparent!important}
+.kn-map .maplibregl-ctrl-attrib a{color:var(--secondary)!important}
+/* Copy over imagery always needs a ground to sit on. */
+.kn-veil{position:absolute;inset:0;z-index:1;pointer-events:none}
+.kn-veil.left{background:linear-gradient(100deg,var(--bg) 2%,color-mix(in srgb,var(--bg) 84%,transparent) 32%,transparent 64%)}
+.kn-veil.center{background:radial-gradient(ellipse at 50% 50%,color-mix(in srgb,var(--bg) 78%,transparent) 0%,transparent 60%)}
+.kn-veil.vignette{background:radial-gradient(ellipse at 50% 46%,transparent 40%,color-mix(in srgb,var(--bg) 90%,transparent) 96%)}
+/* Slide 1: the ground under the lower-third title band, plus an orbital
+   vignette. Two layers, because one gradient cannot both darken the floor and
+   keep the middle of the frame clear. */
+.kn-veil.lower{background:
+  linear-gradient(to top,var(--bg) 0%,color-mix(in srgb,var(--bg) 92%,transparent) 15%,
+    color-mix(in srgb,var(--bg) 55%,transparent) 30%,transparent 48%),
+  radial-gradient(ellipse 78% 62% at 50% 34%,transparent 42%,color-mix(in srgb,var(--bg) 82%,transparent) 100%)}
+
+/* ══ SLIDE 1 — the landing ═══════════════════════════════════════════════════
+   The archipelago is never covered: the copy lives in a fixed bottom band and
+   the camera is padded by that same fraction (TITLE_BAND in scenes.tsx). */
+.kn-landing{overflow:hidden}
+.kn-lower{position:absolute;left:0;right:0;bottom:0;z-index:3;
+  height:34%;display:flex;flex-direction:column;justify-content:center;
+  padding:0 var(--pad) calc(var(--gap)*2.6);pointer-events:none}
+.kn-lower .kn-hero{max-width:20ch}
+.kn-lower .kn-lede{margin-top:calc(var(--gap)*1.1);color:var(--secondary);max-width:34ch}
+
+.kn-hint{position:absolute;right:var(--pad);top:calc(var(--gap)*2.4);z-index:4;
+  display:flex;align-items:center;gap:10px;padding:8px 16px 8px 12px;
+  border:1px solid var(--hairline);border-radius:99px;background:var(--veil);
+  backdrop-filter:blur(14px);font-size:calc(var(--u)*.68);color:var(--secondary);
+  letter-spacing:.04em;pointer-events:none}
+.kn-hint-dot{width:7px;height:7px;border-radius:50%;background:var(--geology);
+  box-shadow:0 0 16px color-mix(in srgb,var(--geology) 90%,transparent)}
+
+/* Tapping a basin opens the Knowledge Bank's OWN charts — the petroleum-system
+   events chart and the tectonostratigraphic column, the real components, not
+   pictures of them. It needs real width to be legible from the back of a room,
+   so this is a right-hand rail, not a tooltip. */
+.kn-dossier{position:absolute;right:0;top:0;bottom:0;z-index:6;
+  width:min(58ch,46vw);display:flex;flex-direction:column;gap:calc(var(--gap)*1.1);
+  padding:calc(var(--gap)*1.8) calc(var(--gap)*1.9) calc(var(--gap)*2.4);
+  overflow-y:auto;overscroll-behavior:contain;
+  border-left:1px solid var(--hairline);
+  background:linear-gradient(to left,color-mix(in srgb,var(--bg) 96%,transparent) 60%,
+    color-mix(in srgb,var(--bg) 82%,transparent) 100%);
+  backdrop-filter:blur(30px) saturate(1.15);box-shadow:-40px 0 120px rgb(0 0 0/.5);
+  animation:kn-pop-in .55s cubic-bezier(.16,1,.3,1) both}
+@keyframes kn-pop-in{from{opacity:0;transform:translateX(34px)}}
+.kn-dossier header{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--gap)}
+.kn-dossier-meta{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;
+  padding-bottom:calc(var(--gap)*.9);border-bottom:1px solid var(--hairline);
+  font-size:calc(var(--u)*.7);color:var(--secondary)}
+.kn-dossier-meta span{flex:1;min-width:14ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kn-dossier-meta b{font-family:'JetBrains Mono',monospace;font-size:calc(var(--u)*.62);
+  letter-spacing:.1em;color:var(--primary)}
+/* Provenance as texture: the weakest citation state on screen, stated. */
+.kn-cite{font-style:normal;padding:2px 9px;border-radius:99px;font-size:calc(var(--u)*.56);
+  letter-spacing:.14em;text-transform:uppercase;border:1px solid currentColor}
+.kn-cite.cited{color:#7FD1A4}
+.kn-cite.verified{color:var(--technology)}
+.kn-cite.recalled{color:var(--geology)}
+.kn-cite.none{color:var(--secondary)}
+.kn-dossier-chart h4{margin:0 0 calc(var(--gap)*.7);font-size:calc(var(--u)*.64);
+  letter-spacing:.2em;text-transform:uppercase;font-weight:600;color:var(--secondary)}
+/* The charts are built for the Knowledge Bank's light panels; scoping a dark
+   surface here is cheaper and safer than theming them, and keeps the deck's
+   one-theme rule without touching a shared component. */
+.kn-dossier-chart{--surface:#0B1520;--panel:#0B1520;color:var(--primary)}
+.kn-dossier-chart svg text{fill:var(--secondary)}
+.kn-pop-x{width:28px;height:28px;flex:0 0 auto;border:1px solid var(--hairline);border-radius:50%;
+  background:transparent;color:var(--secondary);font-size:17px;line-height:1;cursor:pointer;font-family:inherit}
+.kn-pop-x:hover{background:var(--veil);color:var(--primary)}
+.kn-pop-kind{font-size:calc(var(--u)*.58);letter-spacing:.22em;text-transform:uppercase;color:var(--geology)}
+.kn-pop-name{margin:8px 0 calc(var(--gap)*1.1);font-size:calc(var(--u)*1.32);font-weight:600;
+  line-height:1.2;letter-spacing:-.018em}
+.kn-pop-rows{margin:0;display:flex;flex-direction:column;gap:7px}
+.kn-pop-rows>div{display:flex;justify-content:space-between;gap:14px;
+  padding-bottom:7px;border-bottom:1px solid var(--hairline)}
+.kn-pop-rows dt{font-size:calc(var(--u)*.7);color:var(--secondary)}
+.kn-pop-rows dd{margin:0;font-size:calc(var(--u)*.72);font-weight:600;text-align:right;
+  font-variant-numeric:tabular-nums}
+.kn-pop-src{display:block;margin-top:calc(var(--gap)*1.1);font-size:calc(var(--u)*.58);
+  color:var(--secondary);opacity:.7;letter-spacing:.05em}
+
+/* ══ three.js stage (bloom lives here) ═══════════════════════════════════════ */
+.kn-gl{position:absolute;inset:0;z-index:1;pointer-events:none}
+.kn-gl canvas{display:block}
+
+/* ══ scene furniture ═════════════════════════════════════════════════════════ */
+.kn-starfield{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+
+/* slide 2 — the descent */
+.kn-traj{position:relative;margin:calc(var(--gap)*2) 0 calc(var(--gap)*1.2)}
+.kn-traj-svg{width:100%;height:clamp(96px,12vw,208px);display:block;overflow:visible}
+.kn-traj-svg path{fill:none;stroke:var(--geology);stroke-width:2.6;stroke-linecap:round;
+  filter:drop-shadow(0 0 14px color-mix(in srgb,var(--geology) 62%,transparent))}
+.kn-traj-stages{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--gap);margin-top:var(--gap)}
+.kn-traj-stage{display:flex;flex-direction:column;gap:7px;align-items:flex-start}
+.kn-traj-stage i{width:7px;height:7px;border-radius:50%;background:var(--geology);
+  box-shadow:0 0 16px color-mix(in srgb,var(--geology) 80%,transparent)}
+.kn-traj-stage b{font-size:calc(var(--u)*.86);font-weight:600;line-height:1.26;letter-spacing:var(--track-body)}
+.kn-proof{display:flex;flex-wrap:wrap;gap:9px}
+.kn-proof-chip{padding:7px 15px;border:1px solid var(--hairline);border-radius:99px;
+  font-size:calc(var(--u)*.76);color:var(--secondary);background:var(--veil)}
+
+/* slide 3 — four dimensions */
+.kn-dims{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:calc(var(--gap)*1.5) calc(var(--gap)*2.4);margin-top:calc(var(--gap)*1.8)}
+.kn-dim{display:grid;grid-template-columns:auto 1fr;gap:0 var(--gap);align-items:center}
+.kn-dim-dot{grid-row:1/3;width:11px;height:11px;border-radius:50%;background:var(--technology);
+  box-shadow:0 0 26px color-mix(in srgb,var(--technology) 85%,transparent)}
+.kn-dim b{font-size:calc(var(--u)*1.28);font-weight:600;letter-spacing:var(--track-body);line-height:1.2}
+.kn-dim em{font-style:normal;font-size:calc(var(--u)*.72);color:var(--secondary);letter-spacing:.02em}
+
+/* slide 4 — the turn: risk and answer in ONE frame, two acts.
+   The particle field is pushed right back so the type is the subject; a dimmer
+   field reads as a network, a bright dense one reads as television static
+   (which is exactly what the two separate slides looked like). */
+.kn-turn .kn-gl{opacity:.44}
+.kn-turn::after{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:radial-gradient(ellipse 68% 56% at 50% 50%,
+    color-mix(in srgb,var(--bg) 66%,transparent) 0%,transparent 74%)}
+/* Both acts occupy the SAME grid cell, so the turn happens in place — the frame
+   must not jump to a new layout halfway through one thought. */
+.kn-turn-stack{display:grid;max-width:min(26ch,90vw)}
+.kn-turn-stack>.kn-act{grid-area:1/1}
+.kn-act .kn-eyebrow{margin-bottom:calc(var(--gap)*2)}
+.kn-eyebrow-gold{color:var(--geology);opacity:1}
+.kn-mega-b{color:var(--secondary)}
+.kn-tear{width:100%;height:24px;margin:calc(var(--gap)*1.5) 0;overflow:visible}
+.kn-tear svg{width:100%;height:100%;overflow:visible}
+.kn-tear path{fill:none;stroke:var(--indonesia);stroke-width:2;stroke-linecap:round;
+  stroke-linejoin:round;vector-effect:non-scaling-stroke;opacity:0;
+  filter:drop-shadow(0 0 18px color-mix(in srgb,var(--indonesia) 78%,transparent))}
+
+/* The flag beat, closing act II. RED above WHITE: Sang Saka Merah-Putih.
+   A band along the floor of the frame, NOT a wash across the middle. v1 laid a
+   translucent flag straight over the sentence and made the punchline
+   unreadable; a flag on a stage sits below the speaker, so this one does too. */
+.kn-flagband{position:absolute;left:0;right:0;bottom:0;z-index:2;
+  height:clamp(10px,1.4vh,18px);display:flex;flex-direction:column;overflow:hidden;
+  pointer-events:none;box-shadow:0 -24px 70px color-mix(in srgb,#CE1126 16%,transparent)}
+.kn-flagband i{display:block;height:50%}
+.kn-flagband i:first-child{background:#CE1126}   /* red — top */
+.kn-flagband i:last-child{background:#fff}       /* white — bottom */
+.kn-four{display:flex;flex-wrap:wrap;justify-content:center;
+  gap:calc(var(--gap)*.6) calc(var(--gap)*2.2);margin-top:calc(var(--gap)*2.4)}
+.kn-four-line{font-size:calc(var(--u)*1.22);font-weight:500;color:var(--geology);letter-spacing:-.012em}
+
+/* slide 6 — the chain */
+.kn-chain{display:grid;grid-template-columns:repeat(9,1fr);gap:8px;align-items:end;
+  margin-top:calc(var(--gap)*2);min-height:clamp(120px,15vw,240px)}
+.kn-chain-node{display:flex;flex-direction:column;align-items:center;gap:12px}
+.kn-chain-node i{display:block;width:4px;border-radius:99px;
+  background:linear-gradient(to top,var(--technology),var(--geology));
+  box-shadow:0 0 20px color-mix(in srgb,var(--geology) 62%,transparent)}
+.kn-chain-node b{font-size:calc(var(--u)*.76);font-weight:600;text-align:center;line-height:1.22}
+
+/* slide 7 — the live demo.
+   The demo IS the slide, so it takes three quarters of the wall and the copy is
+   compressed into a left rail. Sizing is height-driven (`height` + the frame's
+   own aspect-ratio derives the width) because the binding constraint on a
+   16:9 projector is vertical, not horizontal. */
+.kn-split{position:absolute;inset:0;z-index:3;display:grid;
+  grid-template-columns:1fr 3fr;align-items:center;
+  gap:calc(var(--gap)*2.4);padding:calc(var(--gap)*2.5) var(--pad)}
+.kn-split-copy{align-self:center}
+.kn-split-copy .kn-punch{font-size:calc(var(--u)*1.95);max-width:14ch}
+.kn-split-copy .kn-quiet{font-size:calc(var(--u)*.95);max-width:22ch}
+.kn-split-stage{position:relative;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;min-width:0}
+
+.kn-demo{display:flex;flex-direction:column;align-items:center;gap:calc(var(--gap)*1.1);
+  width:100%;justify-content:center}
+/* Width is derived from the height budget times the frame's ratio, then clamped
+   by the column. Setting BOTH height and max-width would break aspect-ratio. */
+.kn-split-stage .kn-device.desktop{width:min(100%,calc((100vh - 190px) * 1.6))}
+.kn-split-stage .kn-device.mobile{width:min(100%,calc((100vh - 190px) * .4615))}
+.kn-seg{display:inline-flex;padding:3px;border:1px solid var(--hairline);border-radius:99px;background:var(--veil)}
+.kn-seg button{padding:7px 17px;border:0;border-radius:99px;background:transparent;color:var(--secondary);
+  font-size:calc(var(--u)*.74);cursor:pointer;transition:background .35s,color .35s;font-family:inherit}
+.kn-seg button.on{background:var(--geology);color:#0B1520;font-weight:600}
+/* The device morph animates the BOX, never `width`. Transitioning width
+   re-lays-out the embedded app on every frame — 60 reflows a second of a real
+   Vite app, which stutters and also fights any read of the element's size. */
+.kn-device{position:relative;box-sizing:border-box;background:var(--surface);
+  border:1px solid var(--hairline);overflow:hidden;
+  box-shadow:0 50px 140px rgb(0 0 0/.42);
+  transition:border-radius .7s cubic-bezier(.16,1,.3,1);
+  /* The app runs at a LARGER logical viewport and is scaled down, so whole
+     screens are legible from the back row instead of a magnified fragment.
+     1/.75 = 133.334%. Change --zoom alone to retune. */
+  --zoom:.75}
+.kn-device.desktop{width:min(62vw,940px);aspect-ratio:16/10;border-radius:14px;padding-top:26px}
+.kn-device.mobile{width:min(21vw,258px);aspect-ratio:9/19.5;border-radius:32px;border-width:7px}
+.kn-device iframe{border:0;display:block;background:var(--surface);
+  width:calc(100% / var(--zoom));height:calc(100% / var(--zoom));
+  transform:scale(var(--zoom));transform-origin:0 0}
+.kn-device img{width:100%;height:100%;object-fit:cover;display:block}
+.kn-device-bar{position:absolute;left:0;right:0;top:0;height:26px;display:flex;align-items:center;gap:6px;
+  padding:0 12px;background:color-mix(in srgb,var(--surface) 84%,var(--primary));z-index:2}
+.kn-device-bar i{width:8px;height:8px;border-radius:50%;background:var(--hairline)}
+
+/* slide 8 — three worlds.
+   Each card owns one hue (--sa, set per card in scenes.tsx): a ghosted ordinal
+   watermark, a hairline top edge in the accent, a rule that wipes out under the
+   name, and the outcome isolated at the foot as the payoff. */
+.kn-stages{display:grid;grid-template-columns:repeat(3,1fr);gap:calc(var(--gap)*1.5);
+  margin-top:calc(var(--gap)*2);perspective:1400px}
+.kn-stage-card{position:relative;overflow:hidden;isolation:isolate;
+  padding:calc(var(--gap)*1.9) calc(var(--gap)*1.7) calc(var(--gap)*1.5);
+  border-radius:22px;border:1px solid color-mix(in srgb,var(--sa) 30%,var(--hairline));
+  display:flex;flex-direction:column;gap:calc(var(--gap)*.7);
+  min-height:clamp(250px,29vw,440px);
+  background:
+    radial-gradient(120% 70% at 0% 0%,color-mix(in srgb,var(--sa) 15%,transparent) 0%,transparent 62%),
+    color-mix(in srgb,var(--surface) 42%,transparent);
+  backdrop-filter:blur(16px);
+  box-shadow:0 30px 90px rgb(0 0 0/.24),
+    inset 0 1px 0 color-mix(in srgb,var(--sa) 40%,transparent)}
+/* The ordinal is texture, not information — it must never compete with the name. */
+.kn-stage-i{position:absolute;right:-.06em;bottom:-.32em;z-index:-1;
+  font-family:'JetBrains Mono',monospace;font-size:calc(var(--u)*7.6);font-weight:700;
+  line-height:.8;letter-spacing:-.06em;color:var(--sa);opacity:.09;pointer-events:none}
+.kn-stage-num{font-family:'JetBrains Mono',monospace;font-size:calc(var(--u)*.58);letter-spacing:.26em;
+  text-transform:uppercase;color:color-mix(in srgb,var(--sa) 75%,var(--secondary))}
+.kn-stage-name{margin:0;font-size:calc(var(--u)*2.35);font-weight:600;letter-spacing:.01em;line-height:1;
+  color:var(--primary)}
+.kn-stage-rule{display:block;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,var(--sa),color-mix(in srgb,var(--sa) 8%,transparent));
+  box-shadow:0 0 18px color-mix(in srgb,var(--sa) 55%,transparent)}
+.kn-stage-words{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.kn-stage-words li{font-size:calc(var(--u)*.94);color:var(--secondary);letter-spacing:var(--track-body)}
+.kn-stage-out{margin-top:auto;align-self:flex-start;
+  padding:8px 15px;border-radius:99px;
+  border:1px solid color-mix(in srgb,var(--sa) 45%,transparent);
+  background:color-mix(in srgb,var(--sa) 12%,transparent);
+  font-family:'JetBrains Mono',monospace;font-size:calc(var(--u)*.62);letter-spacing:.14em;
+  text-transform:uppercase;color:var(--primary)}
+
+/* slide 9 — the living ecosystem */
+.kn-eco{position:absolute;inset:0;z-index:1;pointer-events:none}
+.kn-eco svg{position:absolute;inset:0;width:100%;height:100%}
+.kn-eco line{stroke:var(--technology);stroke-width:1;vector-effect:non-scaling-stroke;opacity:.32}
+.kn-eco-dot{fill:var(--geology)}
+.kn-eco-label{position:absolute;transform:translate(-50%,-50%);padding:7px 15px;border:1px solid var(--hairline);
+  border-radius:99px;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(10px);
+  font-size:calc(var(--u)*.74);color:var(--primary);white-space:nowrap}
+.kn-eco-center{position:absolute;transform:translate(-50%,-50%);text-align:center;
+  font-size:calc(var(--u)*.9);font-weight:600;color:var(--geology);line-height:1.3;
+  text-shadow:0 0 30px color-mix(in srgb,var(--geology) 70%,transparent)}
+.kn-eco-copy{max-width:32ch}
+
+/* slide 10 — the ask */
+.kn-questions{display:flex;flex-direction:column;gap:calc(var(--gap)*1.3);margin:calc(var(--gap)*2) 0}
+.kn-question{display:grid;grid-template-columns:auto 1fr;gap:calc(var(--gap)*1.3);align-items:baseline}
+.kn-question-num{font-family:'JetBrains Mono',monospace;font-size:calc(var(--u)*.9);
+  font-weight:500;color:var(--geology);line-height:1.4}
+.kn-question-text{font-size:calc(var(--u)*1.42);line-height:1.32;max-width:30ch;font-weight:450;letter-spacing:var(--track-body)}
+.kn-final{font-size:calc(var(--u)*2.05);line-height:1.24;font-weight:600;max-width:24ch;letter-spacing:-.024em;margin:0}
+
+/* A ground for copy that sits over imagery. */
+.kn-panel{padding:calc(var(--gap)*1.6) calc(var(--gap)*2);border-radius:24px;
+  background:color-mix(in srgb,var(--bg) 58%,transparent);backdrop-filter:blur(22px) saturate(1.1);
+  border:1px solid var(--hairline)}
+
+@media (prefers-reduced-motion:reduce){
+  .kn-root,.kn-dot,.kn-ov-card,.kn-chrome,.kn-device{transition:none!important}
+}
+@media (max-width:1100px){
+  .kn-traj-stages{grid-template-columns:repeat(4,1fr);row-gap:16px}
+  .kn-chain{grid-template-columns:repeat(5,1fr);row-gap:20px}
+  .kn-dims,.kn-stages,.kn-overview-grid{grid-template-columns:1fr}
+  .kn-overview-grid{grid-template-columns:repeat(2,1fr)}
+  .kn-device.desktop{width:88vw}
+  .kn-device.mobile{width:52vw}
+  /* Below this width a 1:3 split leaves the copy at ~20ch — unreadable. Stack
+     instead, demo first, so the demo still owns the majority of the frame. */
+  .kn-split{grid-template-columns:1fr;grid-template-rows:auto 1fr;
+    align-content:center;gap:calc(var(--gap)*1.4)}
+  .kn-split-copy .kn-punch{max-width:24ch}
+  .kn-split-stage .kn-device.desktop{width:min(100%,calc((100vh - 300px) * 1.6))}
+  .kn-split-stage .kn-device.mobile{width:min(100%,calc((100vh - 300px) * .4615))}
+  .kn-lower{height:38%}
+  /* Narrow: the dossier becomes a bottom sheet, since a 46vw rail would leave
+     the charts too thin to read. */
+  .kn-dossier{width:100vw;top:auto;height:68vh;border-left:0;border-top:1px solid var(--hairline);
+    background:color-mix(in srgb,var(--bg) 95%,transparent);box-shadow:0 -40px 100px rgb(0 0 0/.5)}
+  @keyframes kn-pop-in{from{opacity:0;transform:translateY(34px)}}
+}

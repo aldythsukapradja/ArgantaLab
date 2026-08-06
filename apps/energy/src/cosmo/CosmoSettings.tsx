@@ -3,12 +3,15 @@
 // Light/Dark selector · density · motion), FOUNDATION (governed workspace). Theme mode
 // drives the shell's dark state; the Designer Studio embeds the verbatim data: URL app.
 import { useState } from 'react';
-import { Settings, X, Palette, Sun, Moon, Rows3, Sparkles, Shield, Minimize2, Ruler } from 'lucide-react';
+import { Settings, X, Palette, Sun, Moon, Rows3, Sparkles, Minimize2, Ruler, Presentation } from 'lucide-react';
 import { DESIGNER_STUDIO_URL } from './designer-studio-url';
 import { useUnits, unitConventions, systemLabel } from '../units';
 
-export function CosmoSettings({ open, onClose, dark, setDark }: {
+export function CosmoSettings({ open, onClose, dark, setDark, onPresent }: {
   open: boolean; onClose: () => void; dark: boolean; setDark: (v: boolean) => void;
+  /** Launches the keynote surface. Settings is a modal, so it hands off rather
+   *  than hosting — a cinematic deck cannot live inside a dialog. */
+  onPresent?: () => void;
 }) {
   const [designer, setDesigner] = useState(false);
   const [density, setDensity] = useState('comfortable');
@@ -79,11 +82,14 @@ export function CosmoSettings({ open, onClose, dark, setDark }: {
               <button className={'tgl ' + (motion ? 'on' : '')} onClick={() => setMotion(!motion)} />
             </div>
 
-            <div className="set-sec">FOUNDATION</div>
-            <div className="set-row">
-              <span className="si"><Shield size={15} /></span>
-              <div><div className="st">C1-controlled workspace</div><div className="sd">Permissions, routing and export controls require production services</div></div>
-              <span className="chip">GOVERNED</span>
+            <div className="set-sec">PRESENTATION</div>
+            <div className="set-row" style={{ borderColor: 'var(--amber)', background: 'color-mix(in srgb, var(--amber) 8%, transparent)' }}>
+              <span className="si"><Presentation size={15} /></span>
+              <div>
+                <div className="st">Indonesia's Geological Legacy</div>
+                <div className="sd">9 scenes · ~18 min · every figure read live from the corpus</div>
+              </div>
+              <button className="newbtn" onClick={() => { onClose(); onPresent?.(); }}>Present</button>
             </div>
           </div>
         </div>
