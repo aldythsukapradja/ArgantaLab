@@ -767,6 +767,7 @@ html[data-ui="cosmo"] .fds-ad-zkey em{font-style:normal;color:var(--ink3)}
 html[data-ui="cosmo"] .fds-explorer{display:flex;min-width:0;min-height:0;flex-direction:column;overflow:hidden}
 html[data-ui="cosmo"] .fds-explorer-bar{display:flex;align-items:center;gap:9px;flex:0 0 auto;padding:7px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
 html[data-ui="cosmo"] .fds-explorer-title{font-size:11px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .fds-explorer-sub.lead{font-size:10.5px;font-weight:600;color:var(--ink2)}
 html[data-ui="cosmo"] .fds-explorer-sub{min-width:0;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink3)}
 html[data-ui="cosmo"] .fds-explorer-spacer{flex:1}
 html[data-ui="cosmo"] .fds-explorer-dims,html[data-ui="cosmo"] .fds-explorer-panes{display:flex;flex:0 0 auto;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
@@ -827,3 +828,35 @@ html[data-ui="cosmo"] .fdt-lbl{min-width:0;flex:1;font-size:9.5px;white-space:no
 html[data-ui="cosmo"] .fdt-lbl i{margin-left:4px;font-style:normal;font-size:8px;color:var(--ink3)}
 html[data-ui="cosmo"] .fdt-n{flex:0 0 auto;padding:0 4px;border-radius:4px;font:7.5px var(--mono);color:var(--ink3)}
 html[data-ui="cosmo"] .fdt-n.has{background:var(--line2);color:var(--ink2)}
+
+/* ── the Input tree adopts the Simulation / Model tree's visual language ──────
+   Ported as STYLE, not as code: the Input tree carries behaviour the model trees do
+   not have (per-row visibility eyes, row actions, live-selection marks), and swapping
+   its component for the simpler shared one would silently drop those. What a user
+   actually asked for — that the drawers look and feel like one another — is a
+   presentation change, so it is made in presentation.
+
+   The pieces that carry over: the leading-edge accent on the selected row (at 10.5 px
+   a colour shift alone is easy to miss when scanning twenty-five wells), the same row
+   height and hover, and the same focus treatment. */
+html[data-ui="cosmo"] .fdt-row{
+  padding:4px 8px 4px 0;gap:6px;border-left:2px solid transparent;
+  transition:background .12s ease,color .12s ease,border-color .12s ease;
+}
+html[data-ui="cosmo"] .fdt-row:hover{background:var(--panel2);color:var(--ink)}
+html[data-ui="cosmo"] .fdt-row.sel{
+  background:var(--teal-soft);color:var(--teal-ink);border-left-color:var(--teal,#38bdf8);
+}
+html[data-ui="cosmo"] .fdt-row:focus-visible{outline:none;background:var(--teal-soft);border-left-color:var(--teal,#7dd3fc)}
+/* `live` marked with the same leading edge rather than a second inset shadow, so a row
+   that is both selected and live reads as one state instead of two competing bars */
+html[data-ui="cosmo"] .fdt-row.live{box-shadow:none;border-left-color:var(--purple,#a78bfa)}
+html[data-ui="cosmo"] .fdt-row.sel.live{border-left-color:var(--purple,#a78bfa)}
+
+/* the visibility eye becomes a real control surface rather than a bare glyph */
+html[data-ui="cosmo"] .fdt-eye{
+  display:grid;place-items:center;width:15px;height:15px;flex:0 0 15px;border-radius:4px;
+  transition:background .12s ease,color .12s ease;
+}
+html[data-ui="cosmo"] .fdt-eye:hover{background:rgba(148,163,184,.18)}
+html[data-ui="cosmo"] .fdt-eye.on{color:var(--teal-ink,#7dd3fc)}

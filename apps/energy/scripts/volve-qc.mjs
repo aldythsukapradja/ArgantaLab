@@ -114,6 +114,7 @@ const items = auditModel({
     curveCoverage,
     conditionedColumnFraction: activeCols ? nearCols / activeCols : 0,
     crs: index.crs ?? null,
+    suspectSurfaces: C.suspect,
     datum: (() => {
       // reconcile our survey-derived TVDSS against the delivery's own picked TVDSS
       const picks = readJson('picks.json').picks
@@ -145,6 +146,12 @@ const items = auditModel({
     repairedColumns: repair?.totalRepaired ?? 0,
     repairAddedFraction: repair?.addedFraction ?? 0,
     unfaulted: true,
+    verticalExtentM: (() => {
+      const t = Array.from(p.topZ).filter(Number.isFinite), b = Array.from(p.baseZ).filter(Number.isFinite);
+      return t.length && b.length ? Math.max(...b) - Math.min(...t) : undefined;
+    })(),
+    reservoirThicknessM: qc.zones.find((z) => reservoirZones.includes(z.name))?.meanThickM,
+    reservoirColumns: qc.zones.find((z) => reservoirZones.includes(z.name))?.columns,
   },
   facies: {
     count: 2,

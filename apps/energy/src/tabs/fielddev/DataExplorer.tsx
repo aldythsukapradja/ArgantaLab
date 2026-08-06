@@ -38,8 +38,7 @@ export function DataExplorer({ field }: { field: SearchEntry }) {
   return (
     <div className="fds-explorer">
       <div className="fds-explorer-bar">
-        <span className="fds-explorer-title">Data Explorer</span>
-        <span className="fds-explorer-sub">
+        <span className="fds-explorer-sub lead">
           {loading
             ? `Digesting ${loading.label} — ${loading.done}/${loading.total}`
             : `${field.name} · basemap, wells, surfaces and the delivery behind them`}

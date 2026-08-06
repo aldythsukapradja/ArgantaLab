@@ -1,6 +1,10 @@
 html[data-ui="cosmo"] .wsb-layout{flex:1;min-height:0;display:grid;grid-template-columns:180px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);background:var(--panel2)}
 html[data-ui="cosmo"] .wsb-ribbon{grid-area:1/1/2/3;min-width:0;border-bottom:1px solid var(--line);background:var(--panel)}
 html[data-ui="cosmo"] .wsb-drawer{grid-area:2/1/3/2;min-width:0;border-right:1px solid var(--line);background:var(--panel)}
+/* An explicitly-null drawer must also COLLAPSE its column. Without this the grid
+   kept reserving 180px and the canvas simply started 180px in — the surface looked
+   indented for no reason, which is what it did on Static Model and Fluids & Rock. */
+html[data-ui="cosmo"] .wsb-layout.no-drawer{grid-template-columns:0 minmax(0,1fr)}
 /* Stage surfaces belong to the canvas cell explicitly. Relying on grid auto-placement
    breaks when the drawer is display:none on compact screens: the stage otherwise
    falls into the vacated first column and leaves the real canvas column blank. */

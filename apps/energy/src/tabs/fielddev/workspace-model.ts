@@ -76,6 +76,15 @@ export interface WorkspaceBore {
   /** wellhead position in the delivery's declared CRS; null when the master has none */
   x: number | null;
   y: number | null;
+  /**
+   * Kelly-bushing elevation, metres — the DRILLING datum.
+   *
+   * A directional survey reports TVD below this; horizon grids, contacts and picks are
+   * all TVD SUB-SEA. Without it the UI cannot convert one to the other, which is
+   * structurally why the datum correction lived only in the headless chain: the
+   * workspace simply did not carry the number. Null when the master does not state it.
+   */
+  kbM: number | null;
   hasLogs: boolean; hasTrajectory: boolean; hasPicks: boolean;
   hasProduction: boolean; hasInjection: boolean;
   hasDrilling: boolean; hasPressure: boolean;
@@ -113,6 +122,30 @@ export interface Workspace {
   trajectories: WorkspaceTrajectory[];
   surfaces: WorkspaceSurface[];
   contacts: WorkspaceContact[];
+  /**
+   * The delivery's own fluid description, verbatim.
+   *
+   * The workspace carried wells, surfaces and contacts but not this, so anything in the
+   * UI needing a brine density, a formation temperature or the published Archie
+   * constants had to invent them — which is structurally why the corrected physics
+   * lived only in the headless chain. Null when the master states none.
+   */
+  pvt: {
+    Bo?: number; Rs?: number; Pi?: number; Pb?: number; T?: number;
+    datum_tvdss?: number;
+    density_kgm3?: { oil?: number; water?: number; gas?: number };
+    rock?: { pref_bara?: number; cf?: number };
+    source?: string;
+  } | null;
+  /** the published saturation-height function and its Archie set, when the delivery has one */
+  shf: {
+    swn?: { a: number; b: number };
+    swirr?: { form: string; c1: number; c2: number };
+    sigmaResMNm?: number;
+    archie?: { mFromK?: { a: number; b: number }; n?: number; a?: number };
+    brine?: { rwOhmM?: number; rwTempC?: number; ppmNaClEquivalent?: number };
+    source?: string;
+  } | null;
   /** the raw picks, for callers that need depths rather than the inventory */
   picks: WorkspacePick[];
   /** every asset the field holds — what this whole model was derived from */

@@ -141,7 +141,64 @@ export const simNodeXY = (g: SimGrid, i: number, j: number) => ({
   y: g.y0 + (j + 0.5) * g.dy,
 });
 
-/** Which simulation node a MODEL column falls in — nearest-neighbour upsampling. */
+/**
+ * BILINEAR weights over the four simulation nodes surrounding a model column.
+ *
+ * ── WHY NEAREST-NEIGHBOUR WAS WRONG FOR A CONTINUOUS PROPERTY ──────────────
+ *
+ * The simulation runs coarse (24² by default) and is upsampled onto a 166 × 131 model
+ * grid, so one simulated node covers roughly 7 × 5 cells. Taking the nearest node gives
+ * every one of those cells the same value, and the result is a field of hard squares —
+ * with sharp boundaries the geostatistics never produced. It reads as a rendering fault
+ * and is worse than that: it is a claim about the rock, made by the upsampler.
+ *
+ * Bilinear interpolation removes the invented boundaries without inventing detail: the
+ * field still carries only 24² worth of information, it simply stops pretending the
+ * transitions are step changes.
+ *
+ * FACIES KEEPS NEAREST. A facies code is categorical — 0.5 between shale and sand is
+ * not a rock — which is the same rule the colour ramps follow.
+ */
+export function simNodeWeights(
+  model: { dx: number; dy: number; x0: number; y0: number },
+  sim: SimGrid,
+  i: number, j: number,
+): Array<{ n: number; w: number }> {
+  const x = model.x0 + (i + 0.5) * model.dx;
+  const y = model.y0 + (j + 0.5) * model.dy;
+  // fractional position in node-CENTRE space, hence the −0.5
+  const u = (x - sim.x0) / sim.dx - 0.5;
+  const v = (y - sim.y0) / sim.dy - 0.5;
+  const i0 = Math.floor(u), j0 = Math.floor(v);
+  const tx = u - i0, ty = v - j0;
+  const cx = (a: number) => Math.max(0, Math.min(sim.nx - 1, a));
+  const cy = (a: number) => Math.max(0, Math.min(sim.ny - 1, a));
+  const i1 = cx(i0 + 1), j1 = cy(j0 + 1), ic = cx(i0), jc = cy(j0);
+  return [
+    { n: jc * sim.nx + ic, w: (1 - tx) * (1 - ty) },
+    { n: jc * sim.nx + i1, w: tx * (1 - ty) },
+    { n: j1 * sim.nx + ic, w: (1 - tx) * ty },
+    { n: j1 * sim.nx + i1, w: tx * ty },
+  ];
+}
+
+/** Bilinear sample of a coarse field at a model column. */
+export function sampleSim(
+  values: ArrayLike<number>,
+  model: { dx: number; dy: number; x0: number; y0: number },
+  sim: SimGrid, i: number, j: number,
+): number {
+  let acc = 0, wsum = 0;
+  for (const { n, w } of simNodeWeights(model, sim, i, j)) {
+    const v = values[n];
+    if (!Number.isFinite(v) || w <= 0) continue;
+    acc += v * w; wsum += w;
+  }
+  return wsum > 0 ? acc / wsum : NaN;
+}
+
+/** Which simulation node a MODEL column falls in — nearest-neighbour upsampling.
+ *  Kept for CATEGORICAL properties, where interpolation is meaningless. */
 export function simNodeOf(
   model: { dx: number; dy: number; x0: number; y0: number },
   sim: SimGrid,
@@ -258,12 +315,32 @@ export function simulateLayer(
     for (let i = 0; i < model.nx; i++) {
       const c = j * model.nx + i;
       const n = simNodeOf(model, sim, i, j);
-      const f = simFacies[n] as 0 | 1;
-      const p = Math.max(0, Math.min(0.6, phiBy[f][n]));
+      // ── THE FACIES BOUNDARY, NOT THE FACIES CODE ──
+      //
+      // A facies code cannot be interpolated — 0.5 between shale and sand is not a rock
+      // — but the INDICATOR can, and then thresholded. Taking the nearest node instead
+      // stamps the simulation grid's own rectangles onto the model: at 24² over 166×131
+      // each node covers ~7×5 cells, so every facies body is a staircase of axis-aligned
+      // blocks. Worse, porosity is drawn from `phiBy[f]`, so the POROSITY field inherits
+      // those rectangles even though it is itself bilinear — which is exactly the "big
+      // squares" the maps showed.
+      //
+      // Interpolating the indicator and cutting at 0.5 keeps the facies discrete while
+      // letting the boundary follow a smooth field. It adds no information: the body
+      // outline is still a 24² decision, it simply stops being drawn with a set square.
+      const fProb = sampleSim(simFacies as unknown as ArrayLike<number>, model, sim, i, j);
+      const f = (Number.isFinite(fProb) ? (fProb >= 0.5 ? 1 : 0) : simFacies[n]) as 0 | 1;
+      // porosity: BILINEAR — the coarse grid carries the information, the upsampler
+      // must not add step boundaries to it
+      const pRaw = sampleSim(phiBy[f], model, sim, i, j);
+      const p = Math.max(0, Math.min(0.6, Number.isFinite(pRaw) ? pRaw : phiBy[f][n]));
       facies[c] = f;
       phie[c] = p;
       // a net fraction is a fraction; the simulation can overshoot on back-transform
-      ntg[c] = ntgHas ? Math.max(0, Math.min(1, ntgBy[n])) : (f ? 1 : 0);
+      const ntgRaw = ntgHas ? sampleSim(ntgBy, model, sim, i, j) : NaN;
+      ntg[c] = ntgHas
+        ? Math.max(0, Math.min(1, Number.isFinite(ntgRaw) ? ntgRaw : ntgBy[n]))
+        : (f ? 1 : 0);
       const raw = phiToK(p, spec.permA, spec.permB);
       // the transform is log-linear and unbounded; beyond the physical ceiling it is
       // extrapolating, and the cap is COUNTED so the extrapolation stays visible

@@ -30,13 +30,45 @@ function centreOf(p: PackedGrid3D): [number, number, number] {
   return [cx, cy, n ? zs / n : 0];
 }
 
+/**
+ * Which axis points up in the emitted mesh.
+ *
+ * ── WHY THIS IS AN OPTION AND NOT A CONSTANT ────────────────────────────────
+ *
+ * This module historically emitted (east, UP, north) — three.js's default Y-up. But
+ * `surface-mesh.ts` emits (east, north, UP), and a viewer that shows both puts a
+ * horizon map beside a grid that is rotated 90° onto its edge. That is exactly what
+ * the Volve viewport was showing: a flat structure map with a vertical wall above it.
+ *
+ * It cannot be repaired with a rotation at the consumer. (east, up, north) is
+ * LEFT-handed — east × up = −north — so no rotation maps it onto the right-handed ENU
+ * frame the scene uses; every candidate either mirrors north or turns the model upside
+ * down. The swap has to happen where the vertices are written, and because swapping two
+ * axes is a reflection, the triangle winding must be reversed with it or every face
+ * ends up lit from inside.
+ */
+export type UpAxis = 'y' | 'z';
+
 // simple growable buffers
 class Buf {
   pos: number[] = []; nrm: number[] = []; uvw: number[] = []; idx: number[] = [];
+  /** true when the mesh is emitted in the right-handed ENU frame (z up).
+   *  A plain field, not a constructor parameter property — node's strip-only
+   *  TypeScript mode rejects those, and every truth-lock imports this file directly. */
+  zUp: boolean;
+  constructor(zUp = false) { this.zUp = zUp; }
   vert(px: number, py: number, pz: number, nx: number, ny: number, nz: number, u: number, v: number, w: number) {
-    this.pos.push(px, py, pz); this.nrm.push(nx, ny, nz); this.uvw.push(u, v, w); return this.pos.length / 3 - 1;
+    // callers work in (east, up, north); z-up swaps the last two on the way out so the
+    // buffer holds (east, north, up)
+    if (this.zUp) { this.pos.push(px, pz, py); this.nrm.push(nx, nz, ny); }
+    else { this.pos.push(px, py, pz); this.nrm.push(nx, ny, nz); }
+    this.uvw.push(u, v, w); return this.pos.length / 3 - 1;
   }
-  quad(a: number, b: number, c: number, d: number) { this.idx.push(a, b, c, a, c, d); }
+  quad(a: number, b: number, c: number, d: number) {
+    // a y↔z swap is a reflection, so the winding flips to keep faces outward
+    if (this.zUp) this.idx.push(a, c, b, a, d, c);
+    else this.idx.push(a, b, c, a, c, d);
+  }
 }
 
 /** Shell = ONE continuous solid skin (Petrel-style): a smooth top surface + smooth base
@@ -45,35 +77,92 @@ class Buf {
  * depths are averaged over the up-to-4 active cells touching each grid corner, so the body
  * reads as one geologic solid. Per-cell UVW is kept (crisp property colouring) by emitting
  * duplicate verts at matching corner positions — visually watertight, cell-accurate colour. */
-export function buildShell(p: PackedGrid3D): MeshBuffers {
-  const [cx, cy, cz] = centreOf(p);
-  const b = new Buf();
-  const { nx, ny, nz, dx, dy } = p;
-  const Y = (depth: number) => -(depth - cz);          // depth up
-  const U = (i: number) => (i + 0.5) / nx, V = (k: number) => (k + 0.5) / ny, W = (l: number) => (l + 0.5) / nz;
-
-  // ── corner-averaged depths → a continuous (gap-free) top & base surface ─────────
-  const NX1 = nx + 1, NY1 = ny + 1;
-  const cornerTop = new Float64Array(NX1 * NY1), cornerBase = new Float64Array(NX1 * NY1);
-  const cornerN = new Uint16Array(NX1 * NY1);
-  const cid = (i: number, k: number) => k * NX1 + i;
+/**
+ * Top and base depth at every grid NODE, averaged over the active cells that touch it.
+ *
+ * ── WHY EVERY SURFACE IN THIS APP HAS TO GO THROUGH HERE ────────────────────
+ *
+ * A cell drawn at its own centre depth is a flat tile floating at one height. Its
+ * neighbour, one cell down-dip, is a flat tile at a DIFFERENT height, and nothing
+ * closes the vertical step between them — so a dipping surface rendered cell-by-cell
+ * is a venetian blind you can see the background through, and vertical exaggeration
+ * multiplies every gap. That is not a small artefact: at ×3 on Volve's flanks it
+ * removes most of the picture, and it reads as a sparse or broken model.
+ *
+ * Sharing NODE depths makes adjacent quads land on byte-identical corner positions,
+ * so the sheet is watertight by construction rather than by luck.
+ */
+export function cornerDepths(p: PackedGrid3D): {
+  top: Float64Array; base: Float64Array; n: Uint16Array; nx1: number;
+  /** node index */ cid: (i: number, k: number) => number;
+} {
+  const { nx, ny } = p;
+  const nx1 = nx + 1, ny1 = ny + 1;
+  const top = new Float64Array(nx1 * ny1), base = new Float64Array(nx1 * ny1);
+  const n = new Uint16Array(nx1 * ny1);
+  const cid = (i: number, k: number) => k * nx1 + i;
   for (let k = 0; k < ny; k++) for (let i = 0; i < nx; i++) {
     if (!active(p, i, k)) continue;
     const c = col(p, i, k), t = p.topZ[c], bz = p.baseZ[c];
     if (!Number.isFinite(t) || !Number.isFinite(bz)) continue;
     for (const [ci, ck] of [[i, k], [i + 1, k], [i + 1, k + 1], [i, k + 1]] as const) {
-      const q = cid(ci, ck); cornerTop[q] += t; cornerBase[q] += bz; cornerN[q]++;
+      const q = cid(ci, ck); top[q] += t; base[q] += bz; n[q]++;
     }
   }
-  for (let q = 0; q < cornerN.length; q++) if (cornerN[q]) { cornerTop[q] /= cornerN[q]; cornerBase[q] /= cornerN[q]; }
+  for (let q = 0; q < n.length; q++) if (n[q]) { top[q] /= n[q]; base[q] /= n[q]; }
+  return { top, base, n, nx1, cid };
+}
+
+/**
+ * Depth of a LAYER BOUNDARY at a node, under proportional layering.
+ *
+ * `f` is the fraction through the zone: 0 is the top of layer 0, 1 the base of the last
+ * layer. Returns NaN at a node no active cell touches, so a caller can refuse to draw
+ * rather than plant a corner at depth zero.
+ */
+export function nodeDepthAt(
+  cd: { top: Float64Array; base: Float64Array; n: Uint16Array; cid: (i: number, k: number) => number },
+  i: number, k: number, f: number,
+): number {
+  const q = cd.cid(i, k);
+  if (!cd.n[q]) return NaN;
+  return cd.top[q] + f * (cd.base[q] - cd.top[q]);
+}
+
+export function buildShell(p: PackedGrid3D, upAxis: UpAxis = 'y'): MeshBuffers {
+  const [cx, cy, cz] = centreOf(p);
+  const b = new Buf(upAxis === 'z');
+  const { nx, ny, nz, dx, dy } = p;
+  const Y = (depth: number) => -(depth - cz);          // depth up
+  const U = (i: number) => (i + 0.5) / nx, V = (k: number) => (k + 0.5) / ny, W = (l: number) => (l + 0.5) / nz;
+
+  // ── corner-averaged depths → a continuous (gap-free) top & base surface ─────────
+  const cd = cornerDepths(p);
+  const { top: cornerTop, base: cornerBase, n: cornerN, cid } = cd;
   const depthAt = (i: number, k: number, top: boolean) => (top ? cornerTop : cornerBase)[cid(i, k)];
 
   // smooth surface normal from the corner depth-gradient (central diff). Surface y=−depth,
   // so n ∝ (∂depth/∂x, 1, ∂depth/∂z) up to sign; base flips vertical component.
   const surfNormal = (i: number, k: number, top: boolean): [number, number, number] => {
     const D = top ? cornerTop : cornerBase;
-    const gx = (D[cid(Math.min(nx, i + 1), k)] - D[cid(Math.max(0, i - 1), k)]) / (2 * dx);
-    const gz = (D[cid(i, Math.min(ny, k + 1))] - D[cid(i, Math.max(0, k - 1))]) / (2 * dy);
+    // ── ONLY DIFFERENCE AGAINST CORNERS THAT EXIST ──────────────────────────
+    //
+    // A corner no active cell touches is still 0 in the accumulator, and 0 is a depth —
+    // roughly 3 km shallower than the reservoir. Differencing against one produces a
+    // near-vertical gradient, so the lighting along the model's edge came from a slope
+    // that is not there. Falling back to a one-sided difference (and to flat when
+    // neither neighbour exists) keeps the normal on real ground.
+    const has = (q: number) => cornerN[q] > 0;
+    const grad = (qLo: number, qHi: number, q0: number, h: number) => {
+      const lo = has(qLo), hi = has(qHi);
+      if (lo && hi) return (D[qHi] - D[qLo]) / (2 * h);
+      if (hi && has(q0)) return (D[qHi] - D[q0]) / h;
+      if (lo && has(q0)) return (D[q0] - D[qLo]) / h;
+      return 0;
+    };
+    const q0 = cid(i, k);
+    const gx = grad(cid(Math.max(0, i - 1), k), cid(Math.min(nx, i + 1), k), q0, dx);
+    const gz = grad(cid(i, Math.max(0, k - 1)), cid(i, Math.min(ny, k + 1)), q0, dy);
     const ny0 = top ? 1 : -1;
     const L = Math.hypot(gx, 1, gz) || 1; return [(gx * ny0) / L, ny0 / L, (gz * ny0) / L];
   };
@@ -90,7 +179,18 @@ export function buildShell(p: PackedGrid3D): MeshBuffers {
         return b.vert(x, y, z, n[0], n[1], n[2], u, v, wl);
       };
       const n0 = P(i, k), n1 = P(i + 1, k), n2 = P(i + 1, k + 1), n3 = P(i, k + 1);
-      if (top) b.quad(n0, n1, n2, n3); else b.quad(n0, n3, n2, n1); // base wound downward
+      // ── WINDING, NOT NORMALS, DECIDES WHAT IS CULLED ────────────────────────
+      //
+      // three.js picks the front face from the screen-space winding; the normal
+      // attribute only lights it. Both surfaces used to be wound the other way, so on
+      // a FrontSide material the top and the base were BOTH discarded and the viewer
+      // saw the perimeter wall bands from inside — which reads as a terraced grid full
+      // of gaps, and is exactly the "why is it so ugly" picture. Lighting looked right
+      // the whole time, because the normals were never wrong.
+      //
+      // The corner order (i,k)→(i,k+1)→(i+1,k+1)→(i+1,k) is counter-clockwise seen from
+      // ABOVE, which is what makes the top face upward; the base takes the reverse.
+      if (top) b.quad(n0, n3, n2, n1); else b.quad(n0, n1, n2, n3);
     }
   }
 

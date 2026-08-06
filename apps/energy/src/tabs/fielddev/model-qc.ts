@@ -83,6 +83,8 @@ export interface ModelQcInput {
      * elevation was subtracted at all.
      */
     datum?: { n: number; meanAbsErrM: number; worstWell?: string; worstErrM?: number; kbApplied: boolean };
+    /** surfaces whose depth range is too large to be one horizon */
+    suspectSurfaces?: string[];
   };
   geometry: {
     nx: number; ny: number; nz: number;
@@ -93,6 +95,12 @@ export interface ModelQcInput {
     bodies: number;
     repairedColumns: number;
     repairAddedFraction: number;
+    /** vertical extent of the whole grid, metres */
+    verticalExtentM?: number;
+    /** gross thickness of the reservoir interval, metres */
+    reservoirThicknessM?: number;
+    /** active columns that the reservoir zone actually reaches */
+    reservoirColumns?: number;
     unfaulted: boolean;
   };
   facies: {
@@ -300,6 +308,21 @@ export function auditModel(a: ModelQcInput): QcItem[] {
     });
   }
 
+  // A depth horizon is ONE stratigraphic marker; its spread should be structural
+  // relief, not kilometres. Volve's "Seabed" grid runs 83 → 2605 m with a median of
+  // 1295 — p10 is the real seabed at 95 m and the rest is a different surface entirely.
+  if (a.data.suspectSurfaces) {
+    const n = a.data.suspectSurfaces.length;
+    add({
+      id: 'data.surfaces', section: 'data', label: 'Horizon plausibility',
+      status: n === 0 ? 'pass' : 'flag',
+      finding: n === 0 ? 'every surface spans a plausible structural range' : `${n} surface(s) span an implausible depth range: ${a.data.suspectSurfaces.join(', ')}`,
+      expected: 'one horizon, one marker — a few hundred metres of relief',
+      consequence: n === 0 ? undefined : 'a contaminated surface is not one horizon; any zone bounded by it has a fictitious thickness and should not be gridded',
+      action: n === 0 ? undefined : 'exclude it from the zone model, or split it into the surfaces it actually contains',
+    });
+  }
+
   add({
     id: 'data.crs', section: 'data', label: 'Coordinate reference system',
     status: a.data.crs ? 'pass' : 'absent',
@@ -364,6 +387,33 @@ export function auditModel(a: ModelQcInput): QcItem[] {
     expected: 'the base moves, never the top; added volume under ~2%',
     consequence: g.repairedColumns === 0 ? undefined : 'the added rock is a modelling decision, not a measurement — it belongs in the uncertainty on the STOIIP',
   });
+
+  // A reservoir model's grid should span the reservoir and its seal. Built from the
+  // seabed down, this one ran 3.4 km of section to hold a 69 m reservoir: 1.36 M cells
+  // for a reservoir that occupied 10 layers in 74% of the columns, and — because
+  // `activeCol` is a UNION over zones — a quarter of those columns never reached the
+  // reservoir at all.
+  if (Number.isFinite(g.verticalExtentM as number) && Number.isFinite(g.reservoirThicknessM as number)) {
+    const ratio = (g.verticalExtentM as number) / Math.max(1, g.reservoirThicknessM as number);
+    add({
+      id: 'geom.extent', section: 'geometry', label: 'Grid extent vs reservoir',
+      status: ratio <= 20 ? 'pass' : 'flag',
+      finding: `the grid spans ${f(g.verticalExtentM, 0)} m to hold a ${f(g.reservoirThicknessM, 0)} m reservoir — ${ratio.toFixed(0)}×`,
+      expected: 'the reservoir and its seal, not the whole sedimentary column',
+      consequence: ratio <= 20 ? undefined : 'cells, memory and simulation time are spent on rock that holds no fluid, and the viewport is dominated by overburden',
+      action: ratio <= 20 ? undefined : 'build the zone model from the sealing horizon down',
+    });
+  }
+  if (Number.isFinite(g.reservoirColumns as number)) {
+    const cover = (g.reservoirColumns as number) / Math.max(1, g.activeCells / g.nz);
+    add({
+      id: 'geom.activecol', section: 'geometry', label: 'Active columns vs reservoir coverage',
+      status: cover >= 0.9 ? 'pass' : 'flag',
+      finding: `the reservoir reaches ${pct(cover)} of the grid's active columns`,
+      expected: 'the activity mask is a UNION over zones, so a shallow zone can activate columns the reservoir never reaches',
+      consequence: cover >= 0.9 ? undefined : 'those columns carry a full stack of cell slots with no geometry, which inflates the cell count and the ACTNUM',
+    });
+  }
 
   add({
     id: 'geom.faults', section: 'geometry', label: 'Faults',

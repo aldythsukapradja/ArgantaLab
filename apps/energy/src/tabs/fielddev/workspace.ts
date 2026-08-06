@@ -52,11 +52,15 @@ interface WellMasterPayload {
   datum?: string;
   wells?: Array<{
     name: string; x?: number; y?: number;
+    /** e.g. "54.90m" — the rig floor above sea level */
+    kb?: string | number | null;
     role?: string; purpose?: string | null;
     metrics?: WellMetrics;
   }>;
   wellheads?: WellheadSpec[];
   contacts?: WorkspaceContact[];
+  pvt?: Workspace['pvt'];
+  shf?: Workspace['shf'];
 }
 
 const num = (v: unknown): number | null => {
@@ -70,7 +74,7 @@ export function emptyWorkspace(fieldId: string): Workspace {
   return {
     fieldId, crs: null, datum: null, utmZone: null,
     wellheads: [], bores: [], curveTypes: [], tops: [],
-    trajectories: [], surfaces: [], contacts: [], picks: [],
+    trajectories: [], surfaces: [], contacts: [], picks: [], pvt: null, shf: null,
     assets: [], fieldLevel: [],
   };
 }
@@ -103,12 +107,14 @@ export async function loadWorkspace(fieldId: string): Promise<Workspace> {
     ? await readRecord<WellMasterPayload>(masterAsset).catch(() => null)
     : null;
 
-  const slots = new Map<string, { x: number | null; y: number | null }>();
+  const slots = new Map<string, { x: number | null; y: number | null; kbM: number | null }>();
   const rolesByBore = new Map<string, WellRole>();
   const metricsByBore = new Map<string, WellMetrics>();
   for (const w of master?.wells ?? []) {
     const k = wellKey(w.name);
-    slots.set(k, { x: num(w.x), y: num(w.y) });
+    // "54.90m" — parseFloat stops at the unit, which is what we want; a bare number
+    // passes through unchanged
+    slots.set(k, { x: num(w.x), y: num(w.y), kbM: num(typeof w.kb === 'string' ? parseFloat(w.kb) : w.kb) });
     // the regulator's published purpose, already resolved to a role by the build —
     // the authority for what a bore is FOR, above anything inferred from the data
     if (w.role && w.role !== 'none') rolesByBore.set(k, w.role as WellRole);
@@ -177,6 +183,7 @@ export async function loadWorkspace(fieldId: string): Promise<Workspace> {
     const bore: WorkspaceBore = {
       key: g.key, name: g.well, role: g.role, roleFromKb: g.roleFromKb,
       x: slot?.x ?? null, y: slot?.y ?? null,
+      kbM: slot?.kbM ?? null,
       hasLogs: g.hasLogs, hasTrajectory: g.hasTrajectory, hasPicks: g.hasPicks,
       hasProduction: g.hasProduction, hasInjection: g.hasInjection,
       hasDrilling: g.hasDrilling, hasPressure: g.hasPressure,
@@ -208,6 +215,8 @@ export async function loadWorkspace(fieldId: string): Promise<Workspace> {
     wellheads, bores,
     curveTypes, tops, trajectories, surfaces,
     contacts: master?.contacts ?? [],
+    pvt: master?.pvt ?? null,
+    shf: master?.shf ?? null,
     picks,
     assets,
     fieldLevel: curated.fieldLevel,

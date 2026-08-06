@@ -323,8 +323,7 @@ export function Petrophysics({ field }: { field: SearchEntry }) {
   return (
     <div className="pps">
       <div className="pps-bar">
-        <span className="pps-title">Petrophysics</span>
-        <span className="pps-sub">
+        <span className="pps-sub lead">
           {ready
             ? `${field.name} · ${ws.bores.length} bores · ${ws.curveTypes.length} curve types · ${ws.tops.length} pick surfaces`
             : 'reading the workspace…'}

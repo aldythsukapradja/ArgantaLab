@@ -28,13 +28,14 @@ const clean = () => ({
     depthUnits: [['m', 24]], logSamples: 175000,
     curveCoverage: [{ family: 'GR', wells: 24 }, { family: 'RHOB', wells: 22 }, { family: 'RT', wells: 20 }],
     conditionedColumnFraction: 0.08, crs: 'ED50 / UTM 31N',
-    datum: { n: 52, meanAbsErrM: 0.84, kbApplied: true },
+    datum: { n: 52, meanAbsErrM: 0.84, kbApplied: true }, suspectSurfaces: [],
   },
   geometry: {
-    nx: 190, ny: 143, nz: 50, cells: 1358500, activeCells: 768350, liveCells: 768350,
+    nx: 166, ny: 131, nz: 20, cells: 434920, activeCells: 228280, liveCells: 228280,
     negativeCells: 0, zeroCells: 0, pinchCells: 0, highAspectCells: 0,
     stackingDefects: 0, orderDefects: 0, bodies: 1,
     repairedColumns: 0, repairAddedFraction: 0, unfaulted: false,
+    verticalExtentM: 770, reservoirThicknessM: 69, reservoirColumns: 11414,
   },
   facies: {
     count: 3, conditioningCells: 347, conditioningSandFraction: 0.827,
@@ -253,6 +254,36 @@ const find = (items, id) => items.find((i) => i.id === id);
   eq('an unfaulted grid flags', find(auditModel(unf), 'geom.faults').status, 'flag');
   const iso = clean(); iso.geometry.bodies = 4;
   eq('disconnected bodies flag', find(auditModel(iso), 'geom.bodies').status, 'flag');
+}
+
+// ══ THE GRID ITSELF — extent, coverage, and a surface that is not one horizon ══
+{
+  eq('a reservoir-scoped grid passes the extent check',
+    find(auditModel(clean()), 'geom.extent').status, 'pass');
+
+  const wide = clean();
+  wide.geometry.verticalExtentM = 3384;            // seabed to TD
+  const it = find(auditModel(wide), 'geom.extent');
+  eq('3.4 km of section for a 69 m reservoir is flagged', it.status, 'flag');
+  check('…and states the ratio', /49×/.test(it.finding), it.finding);
+  check('…and says to build from the seal down', /sealing horizon/.test(it.action ?? ''), it.action);
+
+  // activeCol is a UNION over zones, so shallow zones inflate the active area
+  const union = clean();
+  union.geometry.reservoirColumns = 11382;
+  union.geometry.activeCells = 15367 * 50; union.geometry.nz = 50;
+  eq('a reservoir reaching only 74% of active columns is flagged',
+    find(auditModel(union), 'geom.activecol').status, 'flag');
+  eq('…and full coverage passes', find(auditModel(clean()), 'geom.activecol').status, 'pass');
+
+  // a surface that is not one horizon
+  const bad = clean();
+  bad.data.suspectSurfaces = ['Seabed'];
+  const sf = find(auditModel(bad), 'data.surfaces');
+  eq('an implausible surface range is flagged', sf.status, 'flag');
+  check('…naming it', /Seabed/.test(sf.finding), sf.finding);
+  check('…and saying not to grid a zone bounded by it', /fictitious/.test(sf.consequence ?? ''), sf.consequence);
+  eq('clean surfaces pass', find(auditModel(clean()), 'data.surfaces').status, 'pass');
 }
 
 // ══ the repair must appear on the sheet ════════════════════════════════════

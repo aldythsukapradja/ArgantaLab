@@ -157,5 +157,51 @@ const zone = (bad = [14], badBase = 1995) => ({
     reweldStack([upper, lower], NCOL, active), 0);
 }
 
+// == cleanSurface - one horizon, or two sharing a file? =====================
+{
+  const { cleanSurface } = await import('../src/tabs/fielddev/zone-repair.ts');
+
+  // a real surface with a few wild nodes: the outliers go, the surface stays
+  const good = [];
+  for (let n = 0; n < 400; n++) good.push(2800 + Math.sin(n / 9) * 30);
+  good[7] = 9999; good[100] = -500; good[321] = 12000;
+  const r = cleanSurface(good);
+  eq('three wild nodes are rejected', r.rejected, 3);
+  eq('everything else is kept', r.kept, good.length - 3);
+  check('the surface is usable', !r.unusable, '');
+  check('and it is NOT called bimodal - three points are not a population', !r.bimodal, '');
+  check('the input is never mutated', good[7] === 9999, '');
+  check('rejected nodes become NaN, not an invented depth', Number.isNaN(r.values[7]), '');
+
+  // THE VOLVE SEABED: two coherent populations, and the CONTAMINANT is the majority
+  const two = [];
+  for (let n = 0; n < 1400; n++) two.push(1295 + Math.sin(n / 11) * 40);   // the impostor
+  for (let n = 0; n < 350; n++) two.push(94 + Math.sin(n / 5) * 6);        // the real seabed
+  const b = cleanSurface(two);
+  check('two populations are detected as BIMODAL', b.bimodal, '');
+  check('and the other mode is reported so it can be identified',
+    Math.abs(b.otherModeM - 94) < 12, `${b.otherModeM}`);
+  check('a bimodal grid is UNUSABLE even though the clean "succeeded"', b.unusable, '');
+  check('...which is the point: the clean kept the MAJORITY, and here that is the impostor',
+    b.loM > 1000, `kept window ${b.loM.toFixed(0)}..${b.hiM.toFixed(0)}`);
+
+  // nulls are not values
+  const withNulls = [null, undefined, NaN, ...good];
+  const n2 = cleanSurface(withNulls);
+  eq('nulls are counted separately, not rejected', n2.nullBefore, 3);
+  eq('and do not change what is kept', n2.kept, r.kept);
+
+  // too little data to characterise anything
+  const tiny = cleanSurface([2800, 2810, 2805]);
+  check('a handful of nodes cannot be cleaned and says so', tiny.unusable, '');
+
+  // a spike of identical values would give MAD = 0; the IQR fallback must save it
+  const flat = new Array(500).fill(2800);
+  flat[3] = 4000;
+  const f2 = cleanSurface(flat);
+  check('a zero-MAD surface does not reject everything that is not the median',
+    f2.kept >= 499, `kept ${f2.kept}`);
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

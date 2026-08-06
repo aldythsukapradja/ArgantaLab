@@ -17,7 +17,9 @@ export function WorkflowRibbon({ groups, active, onSelect, label, drawer }: {
   onSelect: (id: string) => void;
   label: string;
   /** The vertical's left rail — Field Development passes its Petrel Input tree. */
-  drawer?: React.ReactNode;
+  /** Omit for the default empty rail; pass explicit `null` to REMOVE the column —
+   *  a surface with its own tree does not want a second one beside it. */
+  drawer?: React.ReactNode | null;
 }) {
   const tabs = groups.flatMap((g) => g.tabs);
   const current = tabs.find((t) => t.id === active) ?? tabs[0];
@@ -59,16 +61,18 @@ export function WorkflowRibbon({ groups, active, onSelect, label, drawer }: {
         </nav>
         {current && (
           <div className="wsb-ribbon-hint">
-            <b>{current.short ?? current.name}</b>
             <span>{current.blurb ?? current.purpose}</span>
             <em>{step}/{tabs.length}</em>
           </div>
         )}
       </div>
-      {/* The left rail. A vertical supplies its own tree via `drawer`; without one
-          the column stays empty rather than collapsing, so the canvas does not
-          jump width as you move between verticals. */}
-      <div className="wsb-drawer">{drawer}</div>
+      {/* The left rail. A vertical supplies its own tree via `drawer`; without one the
+          column normally stays empty rather than collapsing, so the canvas does not
+          jump width as you move between verticals.
+          An EXPLICIT null is different from an omitted prop: it means the surface has
+          its own tree and does not want a second one (the Static Model does), so the
+          column is genuinely removed and the canvas takes the space. */}
+      {drawer !== null && <div className="wsb-drawer">{drawer}</div>}
     </>
   );
 }

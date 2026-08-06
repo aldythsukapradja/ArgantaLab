@@ -24,13 +24,18 @@
 // whether the last thing you did was affordable — the question this viewport has to
 // answer before a 10-million-cell grid is pointed at it.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import type { DigestedSurface } from '../../dataqc/types';
 import { readSurfaceGrid } from '../../dataqc/readDigest';
 import { buildSurfaceMesh, commonOrigin, sharedDepthRange, type MeshGrid } from './surface-mesh';
-import { buildShell } from '../../engine/gridmesh';
+import { buildShell, cornerDepths, nodeDepthAt } from '../../engine/gridmesh';
+import { GeaNavBar } from './GeaNavBar';
+import { SectionDrawer } from './SectionDrawer';
+import {
+  colorTable, normalise, propRange, rampColor, styleFor, axisExtent,
+} from './prop-view';
 import { depthConvention, rampRgb } from './StructureLayer';
 import { loadWellGeometry, buildPaths3D, type Path3D } from './well-geometry';
 import { useStatic } from './static-store';
@@ -80,10 +85,68 @@ function strideFor(ncol: number, nrow: number): number {
   return 4;
 }
 
+/** Applies the clear colour on every change — `onCreated` only fires once, so a theme
+ *  switch while the scene is mounted would otherwise never reach the renderer. */
+function SkyColor({ color }: { color: string }) {
+  const { gl } = useThree();
+  useEffect(() => { gl.setClearColor(color); }, [gl, color]);
+  return null;
+}
+
 export function GeaStudio({ ws, onStats }: { ws: Workspace; onStats?: (s: StudioStats) => void }) {
   const visible = useStatic((s) => s.visibleHorizons);
   const zScale = useStatic((s) => s.zScale);
+  // the packed property arrays are rewritten IN PLACE, so identity never changes —
+  // this counter is what tells every property memo the data underneath it moved
+  const propsVersion = useStatic((s) => s.propsVersion);
+
+  // ── THEME ──
+  //
+  // The scene is drawn into a page that has a light mode, and a black viewport in a
+  // light document is not a style choice, it is a hole. `data-theme` is set on <html>
+  // by the shell, so the canvas follows it — and it is WATCHED, because the user can
+  // switch theme while the scene is mounted and a clear colour set once at creation
+  // would stay dark for the rest of the session.
+  const [dark, setDark] = useState(() =>
+    typeof document === 'undefined' || document.documentElement.getAttribute('data-theme') !== 'light');
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const html = document.documentElement;
+    const read = () => setDark(html.getAttribute('data-theme') !== 'light');
+    read();
+    const mo = new MutationObserver(read);
+    mo.observe(html, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => mo.disconnect();
+  }, []);
+  const sky = dark ? '#0b1017' : '#eef2f7';
+
+  // ── viewport controls, from the STORE ──
+  //
+  // Shared with the 2D pane so the section map follows the K player and both views
+  // colour by the same property. Only `playing` and `sectionMode` stay local — they are
+  // this widget's own transient UI, not model state.
+  const propKey = useStatic((s) => s.propKey);
+  const setPropKey = useStatic((s) => s.setProp);
+  const sliceOn = useStatic((s) => s.sliceOn);
+  const setSliceOn = useStatic((s) => s.setSliceOn);
+  const axis = useStatic((s) => s.sliceAxis);
+  const setAxis = useStatic((s) => s.setSliceAxis);
+  const sliceIx = useStatic((s) => s.sliceIndex);
+  const setSliceIx = useStatic((s) => s.setSliceIndex);
+  const secPts = useStatic((s) => s.sectionPoints);
+  const setSecPts = useStatic((s) => s.setSectionPoints);
+  const showShell = useStatic((s) => s.showShell);
+  const setShowShell = useStatic((s) => s.setShowShell);
+  const showEdges = useStatic((s) => s.showEdges);
+  const propRampMap = useStatic((s) => s.propRamp);
+  const propRangeMap = useStatic((s) => s.propRange);
+  const setPropRamp = useStatic((s) => s.setPropRamp);
+  const setPropRange = useStatic((s) => s.setPropRange);
+  const setShowEdges = useStatic((s) => s.setShowEdges);
+  const [playing, setPlaying] = useState(false);
+  const [sectionMode, setSectionMode] = useState(false);
   const showWells = useStatic((s) => s.showWells);
+  const visibleWells = useStatic((s) => s.visibleWells);
   const showContact = useStatic((s) => s.showContact);
   const view = useStatic((s) => s.view);
   const grid = useStatic((s) => s.grid);
@@ -127,6 +190,12 @@ export function GeaStudio({ ws, onStats }: { ws: Workspace; onStats?: (s: Studio
   }, [showWells, ws.fieldId]);
 
   // ── build every mesh in one shared frame ──
+  //
+  // The frame used to come only from the loaded SURFACES, so deselecting every horizon
+  // left `built` null and the whole scene — the 3D grid included — was replaced by an
+  // empty-state message. A grid is an artifact in its own right: once built it does not
+  // stop existing because you stopped drawing the horizons it was built from.
+  // `gridFrame` below is the fallback, derived from the grid's own extent.
   const built = useMemo(() => {
     if (!loaded.length) return null;
     const grids = loaded.map((l) => l.grid);
@@ -175,34 +244,231 @@ export function GeaStudio({ ws, onStats }: { ws: Workspace; onStats?: (s: Studio
 
   // ── the built grid, as a SHELL ──
   //
-  // gridmesh.buildShell already emits a centred, depth-up mesh with per-vertex UVW
+  // gridmesh.buildShell emits a centred mesh with per-vertex UVW; ask for the z-up
+  // (east, north, up) frame so it shares the scene's axes with the horizon surfaces
   // for a Data3DTexture, so property colouring later costs one texture upload rather
   // than a geometry rebuild. Its own centring is undone here (the scene has its own
   // origin) and the Z exaggeration is applied as a mesh scale, which is why changing
   // exaggeration does NOT rebuild the shell.
   const gridShell = useMemo(() => {
     if (!grid?.packed) return null;
-    const m = buildShell(grid.packed);
+    // 'z' — the SAME frame surface-mesh.ts uses and the scene declares (x east,
+    // y north, z up). The default 'y' is three's Y-up and put the grid on its edge
+    // beside the horizon maps.
+    const m = buildShell(grid.packed, 'z');
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(m.position, 3));
     geometry.setAttribute('normal', new THREE.BufferAttribute(m.normal, 3));
     geometry.setAttribute('uvw', new THREE.BufferAttribute(m.uvw, 3));
     geometry.setIndex(new THREE.BufferAttribute(m.index, 1));
     return {
-      geometry,
-      cx: m.center[0], cy: m.center[1],
+      geometry, uvw: m.uvw,
+      cx: m.center[0], cy: m.center[1], cz: m.center[2],
       faces: m.index.length / 3,
     };
   }, [grid]);
 
+  // ── the property, and the range the legend and the mesh SHARE ──
+  const packedProp = useMemo(() => {
+    const props = grid?.packed?.props ?? [];
+    return props.find((x) => x.name === propKey) ?? props[0] ?? null;
+  }, [grid, propKey, propsVersion]);
+
+  const autoRange = useMemo(
+    () => (grid?.packed && packedProp
+      ? propRange(grid.packed, packedProp)
+      : { lo: 0, hi: 1, n: 0, dataMin: NaN, dataMax: NaN, clippedLo: 0, clippedHi: 0 }),
+    [grid, packedProp, propsVersion],
+  );
+  // a pinned range wins; otherwise auto tracks the data
+  const pinned = packedProp ? propRangeMap[packedProp.name] : undefined;
+  const range = pinned ?? autoRange;
+  const rampId = packedProp ? propRampMap[packedProp.name] : undefined;
+
+  const table = useMemo(
+    () => (packedProp ? colorTable(styleFor(packedProp.name, rampId), range.lo, range.hi) : null),
+    [packedProp, range, rampId],
+  );
+
+  // ── colour the shell, per vertex, from its own UVW ──
+  //
+  // buildShell emits a cell-centre UVW per vertex precisely so a property can be looked
+  // up without touching the geometry. Colouring on the CPU (rather than through a
+  // Data3DTexture and a custom shader) keeps this on the standard lit material, and a
+  // property switch rewrites one Float32Array instead of rebuilding a mesh.
+  useEffect(() => {
+    const g = gridShell?.geometry, p = grid?.packed;
+    if (!g || !p || !packedProp || !gridShell) return;
+    const style = styleFor(packedProp.name, rampId);
+    const uvw = gridShell.uvw;
+    const n = uvw.length / 3;
+    const col = new Float32Array(n * 3);
+    const span = packedProp.dtype === 'u8' ? 255 : 65535;
+    for (let v = 0; v < n; v++) {
+      // UVW are cell-CENTRE coordinates, so floor(u·nx) recovers the cell index
+      const i = Math.min(p.nx - 1, Math.max(0, Math.floor(uvw[v * 3] * p.nx)));
+      const j = Math.min(p.ny - 1, Math.max(0, Math.floor(uvw[v * 3 + 1] * p.ny)));
+      const l = Math.min(p.nz - 1, Math.max(0, Math.floor(uvw[v * 3 + 2] * p.nz)));
+      const raw = packedProp.data[l * (p.nx * p.ny) + j * p.nx + i];
+      const val = packedProp.categorical ? raw : packedProp.min + (raw / span) * (packedProp.max - packedProp.min);
+      const hexc = packedProp.categorical
+        ? (style.codes?.find((c) => c.code === Math.round(val))?.color ?? '#888888')
+        : rampColor(style.stops ?? [], normalise(style, val, range.lo, range.hi));
+      const h = hexc.replace('#', '');
+      col[v * 3] = parseInt(h.slice(0, 2), 16) / 255;
+      col[v * 3 + 1] = parseInt(h.slice(2, 4), 16) / 255;
+      col[v * 3 + 2] = parseInt(h.slice(4, 6), 16) / 255;
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    g.attributes.color.needsUpdate = true;
+  }, [gridShell, grid, packedProp, range, propsVersion, rampId]);
+
+  // scrubbing must never point past the end of a shorter axis
+  const extent = grid?.packed ? axisExtent(grid.packed, axis) : 1;
+  useEffect(() => { if (sliceIx >= extent) setSliceIx(Math.max(0, extent - 1)); }, [extent, sliceIx]);
+
+  // ── THE SLICE ITSELF ──
+  //
+  // The nav bar's controls are only controls; this is what makes them do something.
+  // A slice is built as its own small geometry — one quad per cell of the cut, coloured
+  // from the same ramp and the same range as the shell — rather than by hiding parts of
+  // the shell, because the shell is only the outer skin and has no interior faces to
+  // reveal. I and J cut vertically; K is one layer in map view.
+  const sliceMesh = useMemo(() => {
+    const p = grid?.packed;
+    if (!p || !sliceOn || !packedProp) return null;
+    const style = styleFor(packedProp.name, rampId);
+    const span = packedProp.dtype === 'u8' ? 255 : 65535;
+    const nCol = p.nx * p.ny;
+    const cz = gridShell?.cz ?? 0;
+
+    const pos: number[] = [], col: number[] = [], idx: number[] = [];
+    const rgb = (v: number) => {
+      const h = (packedProp.categorical
+        ? (style.codes?.find((c) => c.code === Math.round(v))?.color ?? '#888888')
+        : rampColor(style.stops ?? [], normalise(style, v, range.lo, range.hi))).replace('#', '');
+      return [parseInt(h.slice(0, 2), 16) / 255, parseInt(h.slice(2, 4), 16) / 255, parseInt(h.slice(4, 6), 16) / 255];
+    };
+    const quad = (a: number[], b: number[], c: number[], d: number[], v: number) => {
+      const n = pos.length / 3;
+      pos.push(...a, ...b, ...c, ...d);
+      const cc = rgb(v);
+      for (let t = 0; t < 4; t++) col.push(...cc);
+      idx.push(n, n + 1, n + 2, n, n + 2, n + 3);
+    };
+    const X = (i: number) => p.x0 + i * p.dx;
+    const Yn = (j: number) => p.y0 + j * p.dy;
+    const Z = (d: number) => -(d - cz);
+
+    // ── THE SLICE IS A SHEET, NOT A PILE OF TILES ────────────────────────────
+    //
+    // Each cell used to be drawn as a flat quad at its own centre depth. Its down-dip
+    // neighbour is a flat quad at a different depth, and nothing closed the vertical
+    // step between them — so on a dipping structure the slice was a venetian blind you
+    // could see the background through, and ×3 exaggeration tripled every gap. It read
+    // as a sparse, broken model; the model was never sparse.
+    //
+    // Node-shared depths make adjacent quads meet on identical corners.
+    const cd = cornerDepths(p);
+    const nodeZ = (i: number, j: number, f: number) => nodeDepthAt(cd, i, j, f);
+
+    const cellVal = (i: number, j: number, l: number) => {
+      const c = j * p.nx + i;
+      if (!p.activeCol[c]) return NaN;
+      const raw = packedProp.data[l * nCol + c];
+      return packedProp.categorical ? raw : packedProp.min + (raw / span) * (packedProp.max - packedProp.min);
+    };
+
+    if (axis === 'k') {
+      const l = Math.min(p.nz - 1, sliceIx);
+      // the layer's own mid-surface, sampled at the four shared NODES of the cell
+      const f = (l + 0.5) / p.nz;
+      for (let j = 0; j < p.ny; j++) for (let i = 0; i < p.nx; i++) {
+        const c = j * p.nx + i;
+        if (!p.activeCol[c]) continue;
+        const v = cellVal(i, j, l);
+        if (!Number.isFinite(v)) continue;
+        const z00 = nodeZ(i, j, f), z10 = nodeZ(i + 1, j, f);
+        const z11 = nodeZ(i + 1, j + 1, f), z01 = nodeZ(i, j + 1, f);
+        // a node no active cell touches has no depth; drawing it would plant a corner
+        // at the datum, kilometres above the reservoir
+        if (![z00, z10, z11, z01].every(Number.isFinite)) continue;
+        quad([X(i), Yn(j), Z(z00)], [X(i + 1), Yn(j), Z(z10)],
+             [X(i + 1), Yn(j + 1), Z(z11)], [X(i), Yn(j + 1), Z(z01)], v);
+      }
+    } else {
+      // A vertical panel has the SAME problem in its own plane: each column drew its
+      // layer boundaries from its own top and base, so the boundary jumped between
+      // adjacent columns and left a horizontal crack the whole way down the section.
+      const fixed = Math.min(axis === 'i' ? p.nx - 1 : p.ny - 1, sliceIx);
+      const n = axis === 'i' ? p.ny : p.nx;
+      for (let t = 0; t < n; t++) {
+        const i = axis === 'i' ? fixed : t, j = axis === 'i' ? t : fixed;
+        const c = j * p.nx + i;
+        if (!p.activeCol[c]) continue;
+        // the two NODES bounding this cell along the section
+        const n0: [number, number] = axis === 'i' ? [i, j] : [i, j];
+        const n1: [number, number] = axis === 'i' ? [i, j + 1] : [i + 1, j];
+        for (let l = 0; l < p.nz; l++) {
+          const v = cellVal(i, j, l);
+          if (!Number.isFinite(v)) continue;
+          const fT = l / p.nz, fB = (l + 1) / p.nz;
+          const aT = nodeZ(n0[0], n0[1], fT), bT = nodeZ(n1[0], n1[1], fT);
+          const aB = nodeZ(n0[0], n0[1], fB), bB = nodeZ(n1[0], n1[1], fB);
+          if (![aT, bT, aB, bB].every(Number.isFinite)) continue;
+          quad([X(n0[0]), Yn(n0[1]), Z(aT)], [X(n1[0]), Yn(n1[1]), Z(bT)],
+               [X(n1[0]), Yn(n1[1]), Z(bB)], [X(n0[0]), Yn(n0[1]), Z(aB)], v);
+        }
+      }
+    }
+    if (!pos.length) return null;
+    const g2 = new THREE.BufferGeometry();
+    g2.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(pos), 3));
+    g2.setAttribute('color', new THREE.BufferAttribute(Float32Array.from(col), 3));
+    g2.setIndex(idx);
+    g2.computeVertexNormals();
+    return { geometry: g2, quads: idx.length / 6 };
+  }, [grid, sliceOn, packedProp, axis, sliceIx, range, gridShell, propsVersion, rampId]);
+
   useEffect(() => () => { gridShell?.geometry.dispose(); }, [gridShell]);
 
   // ── trajectories, in the same local frame ──
+  // A frame from the GRID alone, for when no horizon is drawn.
+  //
+  // A grid is an artifact in its own right: once built it does not stop existing
+  // because you stopped drawing the horizons it was built from. Without this, clearing
+  // the horizon selection replaced the entire scene — grid included — with an
+  // empty-state message.
+  const gridFrame = useMemo(() => {
+    const p = grid?.packed;
+    if (!p) return null;
+    let zLo = Infinity, zHi = -Infinity;
+    for (let c = 0; c < p.topZ.length; c++) {
+      const t = p.topZ[c], b = p.baseZ[c];
+      if (Number.isFinite(t) && t < zLo) zLo = t;
+      if (Number.isFinite(b) && b > zHi) zHi = b;
+    }
+    if (!Number.isFinite(zLo) || !Number.isFinite(zHi)) return null;
+    return {
+      meshes: [] as Array<{ id: string; name: string; geometry: THREE.BufferGeometry; stride: number; dropped: number; tris: number; verts: number }>,
+      origin: { x: p.x0, y: p.y0 },
+      spanX: p.nx * p.dx, spanY: p.ny * p.dy,
+      midZ: -((zLo + zHi) / 2) * zScale,
+      dropped: 0, tris: 0, verts: 0,
+      range: null as null | { dmin: number; dmax: number },
+    };
+  }, [grid, zScale]);
+
+  /** whichever frame exists — surfaces preferred, grid as the fallback */
+  const frame = built ?? gridFrame;
+
   const pathLines = useMemo(() => {
     if (!built || !paths.length) return [];
+    if (!frame) return [];
+    const org = frame.origin;
     return paths.map((p) => {
       const pts = p.points.map(([x, y, tvd]) => new THREE.Vector3(
-        x - built.origin.x, y - built.origin.y, -Math.abs(tvd) * zScale,
+        x - org.x, y - org.y, -Math.abs(tvd) * zScale,
       ));
       const geometry = new THREE.BufferGeometry().setFromPoints(pts);
       // a THREE.Line object rather than a <line> element: in TSX that tag resolves
@@ -234,7 +500,8 @@ export function GeaStudio({ ws, onStats }: { ws: Workspace; onStats?: (s: Studio
 
   const contact = ws.contacts.find((c) => c.tvdss != null);
 
-  if (!visible.length || !built) {
+  // Only genuinely empty when there is NEITHER a surface NOR a grid.
+  if (!frame) {
     return (
       <div className="gvs-void">
         <b>{loading ? 'Decoding surfaces…' : 'Nothing to draw'}</b>
@@ -247,7 +514,7 @@ export function GeaStudio({ ws, onStats }: { ws: Workspace; onStats?: (s: Studio
     );
   }
 
-  const span = Math.max(built.spanX, built.spanY);
+  const span = Math.max(frame.spanX, frame.spanY);
   const cam = span * 1.15;
 
   return (
@@ -261,45 +528,96 @@ export function GeaStudio({ ws, onStats }: { ws: Workspace; onStats?: (s: Studio
         camera={{ position: [0, -cam * 1.05, cam * 0.34], up: [0, 0, 1], fov: 42, near: span / 500, far: span * 12 }}
         gl={{ antialias: true, powerPreference: 'high-performance' }}
         onCreated={({ gl, camera }) => {
-          gl.setClearColor('#0b1017');
+          gl.setClearColor(sky);
           camera.up.set(0, 0, 1);
           camera.lookAt(0, 0, 0);
         }}
       >
-        <ambientLight intensity={0.74} />
-        <directionalLight position={[1, -1, 2]} intensity={1.1} />
+        {/* re-applied on every theme change; onCreated fires once and would not */}
+        <SkyColor color={sky} />
+        <ambientLight intensity={dark ? 0.74 : 0.95} />
+        <directionalLight position={[1, -1, 2]} intensity={dark ? 1.1 : 0.85} />
         <directionalLight position={[-1.4, 0.8, 0.6]} intensity={0.34} />
         <FpsProbe onFps={setFps} />
 
-        <group position={[-built.spanX / 2, -built.spanY / 2, -built.midZ]}>
+        <group position={[-frame.spanX / 2, -frame.spanY / 2, -frame.midZ]}>
           {/* the built 3D grid, drawn as its SHELL — 10 million cells have only a few
               hundred thousand visible faces, and the interior is never a face */}
-          {gridShell && (
+          {/* When the player is on, the SHELL IS HIDDEN. The shell is the outer skin of
+              the whole model, so drawing it over a slice buries the very cells the
+              player exists to expose — you would be looking at the outside of the box
+              while scrubbing through its inside. */}
+          {gridShell && showShell && !sliceOn && (
             <mesh geometry={gridShell.geometry}
-              position={[gridShell.cx - built.origin.x, gridShell.cy - built.origin.y, 0]}
+              // buildShell centres its geometry on the grid's own mean depth, so the
+              // Z centring has to be undone here exactly as the XY centring is. Leaving
+              // z at 0 floats the whole grid cz·zScale above the horizons it was built
+              // from — on Volve that is ~3.1 km, which is why the viewport showed a
+              // block hanging in space with the wells stretched down to reach it.
+              position={[gridShell.cx - frame.origin.x, gridShell.cy - frame.origin.y,
+                         -gridShell.cz * zScale]}
               scale={[1, 1, zScale]}>
-              <meshStandardMaterial color="#5b8db8" roughness={0.9} metalness={0.05}
-                side={THREE.DoubleSide} transparent opacity={0.92} />
+              {/* OPAQUE, and front-faced. At 0.92 alpha on a DoubleSide closed shell
+                  you see the base sheet and the layer-banded perimeter walls THROUGH
+                  the top one, and the interference reads as combs of missing cells. It
+                  was never gaps — it was two surfaces and twenty wall bands showing
+                  through each other. A grid should look like rock. */}
+              <meshStandardMaterial vertexColors roughness={0.82} metalness={0.02}
+                side={THREE.FrontSide} flatShading={false} />
             </mesh>
           )}
-          {built.meshes.map((m, i) => (
+
+          {/* The cell-edge overlay. A shaded skin reads as a lump of geology; the edges
+              are what make it read as a GRID — and they are the only way to judge the
+              layering and the areal resolution by eye. Drawn from the same geometry, so
+              it costs a draw call rather than a rebuild. */}
+          {gridShell && showShell && !sliceOn && showEdges && (
+            <lineSegments position={[gridShell.cx - frame.origin.x, gridShell.cy - frame.origin.y,
+                                     -gridShell.cz * zScale]}
+              scale={[1, 1, zScale]}>
+              <wireframeGeometry args={[gridShell.geometry]} />
+              <lineBasicMaterial color={dark ? '#0f172a' : '#475569'} transparent opacity={0.35} />
+            </lineSegments>
+          )}
+          {/* the IJK slice — same ramp, same range, same frame as the shell */}
+          {sliceMesh && (
+            <mesh geometry={sliceMesh.geometry}
+              position={[-frame.origin.x, -frame.origin.y, -(gridShell?.cz ?? 0) * zScale]}
+              scale={[1, 1, zScale]}>
+              {/* a cut face is looked at from both sides, so DoubleSide stays — but it
+                  is opaque, or the cells behind it bleed through the one being read */}
+              <meshStandardMaterial vertexColors side={THREE.DoubleSide}
+                roughness={0.85} metalness={0.04} />
+            </mesh>
+          )}
+          {/* ── OCCLUDERS ARE HIDDEN WHILE THE PLAYER IS ON ──
+              Hiding the shell was not enough. A horizon surface is a full-extent sheet:
+              on a K slice it sandwiches the layer, and on an I or J slice it cuts
+              straight across the panel — with the deepest one opaque, a vertical cut is
+              hidden almost completely. "Show me cell row i" has to mean row i, not row
+              i behind six surfaces. Wells stay: they are thin lines, they occlude
+              nothing, and without them a bare slice has no spatial anchor. */}
+          {!sliceOn && frame.meshes.map((m, i) => (
             <mesh key={m.id} geometry={m.geometry}>
               {/* the shallower sheets go translucent, or with several opaque surfaces
                   you only ever see the top one */}
               <meshStandardMaterial vertexColors side={THREE.DoubleSide} roughness={0.85} metalness={0.05}
-                transparent={built.meshes.length > 1 && i < built.meshes.length - 1}
-                opacity={built.meshes.length > 1 && i < built.meshes.length - 1 ? 0.62 : 1} />
+                transparent={frame.meshes.length > 1 && i < frame.meshes.length - 1}
+                opacity={frame.meshes.length > 1 && i < frame.meshes.length - 1 ? 0.62 : 1} />
             </mesh>
           ))}
 
-          {showContact && contact?.tvdss != null && (
-            <mesh position={[built.spanX / 2, built.spanY / 2, -Math.abs(contact.tvdss) * zScale]}>
-              <planeGeometry args={[built.spanX, built.spanY]} />
-              <meshBasicMaterial color="#e11d74" transparent opacity={0.15} side={THREE.DoubleSide} depthWrite={false} />
+          {showContact && !sliceOn && contact?.tvdss != null && (
+            <mesh position={[frame.spanX / 2, frame.spanY / 2, -Math.abs(contact.tvdss) * zScale]}>
+              <planeGeometry args={[frame.spanX, frame.spanY]} />
+              <meshBasicMaterial color="#2f80ed" transparent opacity={0.15} side={THREE.DoubleSide} depthWrite={false} />
             </mesh>
           )}
 
-          {showWells && pathLines.map((l) => <primitive key={'p:' + l.well} object={l.object} />)}
+          {showWells && pathLines
+            // null = all; [] = the user switched every one off, which is not the same
+            .filter((l) => visibleWells === null || visibleWells.includes(l.well))
+            .map((l) => <primitive key={'p:' + l.well} object={l.object} />)}
         </group>
 
         <OrbitControls makeDefault enableDamping dampingFactor={0.08}
@@ -308,18 +626,61 @@ export function GeaStudio({ ws, onStats }: { ws: Workspace; onStats?: (s: Studio
           enableRotate={view !== '2d'} />
       </Canvas>
 
+      {/* ── top bar: property · colour table · IJK player · section ── */}
+      {grid?.packed && (
+        <GeaNavBar
+          propKey={packedProp?.name ?? propKey} onProp={setPropKey}
+          available={(grid.packed.props ?? []).map((x) => x.name)}
+          table={table}
+          rangeInfo={autoRange}
+          rampId={rampId ?? styleFor(packedProp?.name ?? 'phi').rampId}
+          onRamp={(id) => packedProp && setPropRamp(packedProp.name, id)}
+          onRange={(r) => packedProp && setPropRange(packedProp.name, r)}
+          pinned={!!pinned}
+          sliceOn={sliceOn} onSliceOn={setSliceOn}
+          axis={axis} onAxis={(a) => { setAxis(a); setSliceIx(0); }}
+          index={sliceIx} onIndex={setSliceIx} extent={extent}
+          playing={playing} onPlaying={setPlaying}
+          sectionMode={sectionMode} onSectionMode={setSectionMode}
+          sectionPoints={secPts.length} onClearSection={() => setSecPts([])}
+          showShell={showShell} onShowShell={setShowShell}
+          showEdges={showEdges} onShowEdges={setShowEdges}
+        />
+      )}
+
+      {/* ── the 2D section drawer, over the viewport ── */}
+      {sectionMode && grid?.packed && packedProp && (
+        <div className="gvs-section-overlay">
+          <SectionDrawer
+            grid={grid.packed as never}
+            prop={packedProp}
+            lo={range.lo} hi={range.hi}
+            layer={axis === 'k' ? sliceIx : 0}
+            points={secPts} onPoints={setSecPts}
+            wells={ws.bores
+              .filter((b) => b.x != null && b.y != null)
+              .map((b) => ({ name: b.name, x: b.x as number, y: b.y as number,
+                producer: b.role === 'oil-producer', injector: /inject/i.test(String(b.role ?? '')) }))}
+          />
+        </div>
+      )}
+
       {loading && <div className="gvs-loading">decoding surfaces…</div>}
 
-      <div className="gvs-legend" title="One ramp across every selected horizon, so their depths are comparable">
-        <b>{Math.round(built.range.dmin)}</b>
-        <i />
-        <b>{Math.round(built.range.dmax)} m</b>
-        <em>TVDSS</em>
-      </div>
+      {/* the depth ramp describes the SURFACES; with none drawn there is nothing for
+          it to describe, and a legend for an absent thing is worse than no legend */}
+      {built?.range && (
+        <div className="gvs-legend" title="One ramp across every selected horizon, so their depths are comparable">
+          <b>{Math.round(built.range.dmin)}</b>
+          <i />
+          <b>{Math.round(built.range.dmax)} m</b>
+          <em>TVDSS</em>
+        </div>
+      )}
 
       <div className="gvs-exag" title="Volve is ~7 km across with ~600 m of relief; at true scale it is a sheet of paper">
         <span>×{zScale} vertical</span>
-        {built.meshes.some((m) => m.stride > 1) && (
+        {!!built?.meshes.some((m) => m.stride > 1) && (
           <span className="gvs-stride" title="Areal decimation — this view is coarser than the interpretation">
             stride {Math.max(...built.meshes.map((m) => m.stride))}
           </span>

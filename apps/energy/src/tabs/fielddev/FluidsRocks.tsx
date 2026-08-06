@@ -37,6 +37,7 @@ import {
 import {
   PvtChart, ViscosityChart, KrChart, TransitionChart, PcChart, PressureDepthChart, InitSwChart,
 } from './fluids-charts';
+import { splitUnit } from './fluids-format';
 import './fluids-rocks.css';
 
 type Pane = 'pvt' | 'scal' | 'init' | 'case';
@@ -58,15 +59,32 @@ const BASIS_TITLE: Record<Basis, string> = {
   regulator: 'The authority’s published figure.',
 };
 
+/** Fixed-width code per basis. Spelling "correlation" out twelve times down a rail is
+ *  noise that pushes every value out of alignment; a four-character code keeps the
+ *  provenance column a column, and the full wording lives in the tooltip. */
+const BASIS_CODE: Record<Basis, string> = {
+  deck: 'DECK', measured: 'MEAS', interpreted: 'INTP',
+  correlation: 'CORR', analogue: 'ANLG', user: 'USER', regulator: 'REG',
+};
+
 const Chip = ({ basis }: { basis: Basis }) => (
-  <i className={`frx-basis-chip b-${basis}`} title={BASIS_TITLE[basis]}>{basis}</i>
+  <i className={`frx-basis-chip b-${basis}`} title={`${basis} — ${BASIS_TITLE[basis]}`}>{BASIS_CODE[basis]}</i>
 );
 
-function Row({ label, value, basis }: { label: string; value: string; basis?: Basis }) {
+/**
+ * One parameter, one line: label · value · unit · provenance.
+ *
+ * `unit` is usually inferred from the value string so the 70-odd existing rows did not
+ * each have to be rewritten, but an explicit `unit` always wins — needed wherever the
+ * value is a composite the splitter correctly refuses to touch.
+ */
+function Row({ label, value, unit, basis }: { label: string; value: string; unit?: string; basis?: Basis }) {
+  const split = unit === undefined ? splitUnit(value) : { value, unit };
   return (
     <div className="frx-kv-row">
-      <span>{label}</span>
-      <b>{value}</b>
+      <span title={label}>{label}</span>
+      <b>{split.value}</b>
+      <u>{split.unit ?? ''}</u>
       {basis ? <Chip basis={basis} /> : <i />}
     </div>
   );
@@ -86,7 +104,137 @@ function Slider({ label, value, min, max, step, onChange, fmt, moved, note }: {
   );
 }
 
-const pct = (v: number, d = 1) => `${(v * 100).toFixed(d)}%`;
+/** Position on a scale, clamped, as a 0–100 percentage. Non-finite input yields 0
+ *  rather than NaN: `left: NaN%` is silently dropped by the browser, so a bad value
+ *  would park a needle at the origin with nothing to say it had failed. */
+const pos = (v: number, lo: number, hi: number) => {
+  if (!Number.isFinite(v) || !Number.isFinite(lo) || !Number.isFinite(hi) || hi === lo) return 0;
+  return Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
+};
+
+/**
+ * What kind of fluid this is, at a glance.
+ *
+ * The rail opened with eleven identically-weighted rows, so the three facts that
+ * actually characterise a reservoir fluid — how light the oil is, how rich the gas is,
+ * how saline the brine is — were buried among the datum depth and the rock
+ * compressibility. This puts them first and on scales, because "28.9 °API" only means
+ * something if you know where that sits between tar and condensate.
+ */
+function FluidSignature({ pvt, anchors }: { pvt: DynamicInitialization['pvt']; anchors: DynamicInitialization['anchors'] }) {
+  // industry bands, so the gradient is a classification and not decoration
+  const API_LO = 10, API_HI = 50;
+  const band = pvt.api < 22.3 ? 'heavy' : pvt.api < 31.1 ? 'medium' : 'light';
+  return (
+    <div className="frx-sig">
+      <div className="frx-sig-hero">
+        <b>{pvt.api.toFixed(1)}</b>
+        <span>°API</span>
+        <em className={`frx-sig-band ${band}`}>{band} crude</em>
+      </div>
+      <div className="frx-sig-scale" title={`${pvt.api.toFixed(1)} °API — heavy < 22.3 · medium 22.3–31.1 · light > 31.1`}>
+        <i className="frx-sig-track" />
+        <i className="frx-sig-needle" style={{ left: `${pos(pvt.api, API_LO, API_HI)}%` }} />
+        <u style={{ left: '0%' }}>10</u>
+        <u style={{ left: '100%', transform: 'translateX(-100%)' }}>50</u>
+      </div>
+      <div className="frx-sig-grid">
+        {[
+          { k: 'Gas gravity', v: pvt.gammaG.toFixed(3), u: 'air = 1', t: `${anchors.rhoGasSc} kg/m³ at surface` },
+          { k: 'Brine', v: pvt.salinityWtPct.toFixed(1), u: 'wt% NaCl', t: `back-solved from ${anchors.rhoWaterSc} kg/m³ through McCain` },
+          { k: 'Solution GOR', v: String(anchors.rsb), u: 'Sm³/Sm³', t: 'at the bubble point, from the deck' },
+        ].map((c) => (
+          <div key={c.k} title={c.t}>
+            <b>{c.v}</b><i>{c.u}</i><span>{c.k}</span>
+          </div>
+        ))}
+      </div>
+      {/* the three surface densities, to scale against each other */}
+      <div className="frx-sig-rho">
+        {[
+          { k: 'oil', v: anchors.rhoOilSc, c: 'var(--teal)' },
+          { k: 'water', v: anchors.rhoWaterSc, c: 'var(--cblue,#60a5fa)' },
+        ].map((r) => (
+          <div key={r.k} title={`${r.k} ${r.v} kg/m³ at surface`}>
+            <span>{r.k}</span>
+            <i><em style={{ width: `${pos(r.v, 700, 1150)}%`, background: r.c }} /></i>
+            <u>{r.v}</u>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The reservoir's pressure state as a track rather than three numbers.
+ *
+ * Whether a fluid is under- or saturated is the single most consequential thing on
+ * this tab — it decides whether an oil–water simulation is even the right physics —
+ * and it was previously two adjacent rows the reader had to subtract in their head.
+ */
+function PressureState({ anchors, undersaturation }: { anchors: DynamicInitialization['anchors']; undersaturation: number }) {
+  const hi = anchors.pi * 1.1;
+  const pbPct = pos(anchors.pb, 0, hi), piPct = pos(anchors.pi, 0, hi);
+  const saturated = undersaturation < 0;
+  return (
+    <div className="frx-state">
+      <div className="frx-state-head">
+        <span>Reservoir state</span>
+        <em className={saturated ? 'bad' : 'good'}>
+          {saturated ? 'saturated' : `${undersaturation.toFixed(0)} bar undersaturated`}
+        </em>
+      </div>
+      <div className="frx-state-track">
+        <i className="frx-state-sat" style={{ width: `${pbPct}%` }} title="below the bubble point — free gas would evolve" />
+        <i className="frx-state-und" style={{ left: `${pbPct}%`, width: `${Math.max(0, piPct - pbPct)}%` }}
+          title={`${undersaturation.toFixed(0)} bar of undersaturation — no free gas in the reservoir`} />
+        <i className="frx-state-mark pb" style={{ left: `${pbPct}%` }} />
+        <i className="frx-state-mark pi" style={{ left: `${piPct}%` }} />
+      </div>
+      <div className="frx-state-legend">
+        <span className="pb"><b>Pb</b> {anchors.pb} bara</span>
+        <span className="pi"><b>Pi</b> {anchors.pi} bara</span>
+        <span className="t"><b>T</b> {anchors.tC} °C</span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * How far a correlation had to be moved to meet the deck.
+ *
+ * The raw factor (×0.9920) is precise and unreadable. What matters is whether it sits
+ * near 1, so this draws it against a ±10% axis with the centre marked — a needle in
+ * the middle means the correlation already described this fluid.
+ */
+function AnchorBar({ label, predicted, target, factor }: {
+  label: string; predicted: string; target: string; factor: number;
+}) {
+  const devPct = (factor - 1) * 100;
+  const SPAN = 10; // ±10% full scale
+  const clamped = Math.max(-SPAN, Math.min(SPAN, devPct));
+  const near = Math.abs(devPct) <= 5;
+  return (
+    <div className="frx-anchorbar">
+      <div className="frx-anchorbar-head">
+        <span>{label}</span>
+        <b className={near ? 'good' : 'warn'}>{devPct >= 0 ? '+' : ''}{devPct.toFixed(1)}%</b>
+      </div>
+      <div className="frx-anchorbar-track" title={`predicted ${predicted} · deck ${target} · ×${factor.toFixed(4)}`}>
+        <i className="frx-anchorbar-zero" />
+        <i className={'frx-anchorbar-fill' + (near ? '' : ' warn')}
+          style={clamped >= 0
+            ? { left: '50%', width: `${(clamped / SPAN) * 50}%` }
+            : { right: '50%', width: `${(-clamped / SPAN) * 50}%` }} />
+      </div>
+      <div className="frx-anchorbar-foot">
+        <span>predicted <b>{predicted}</b></span>
+        <span>deck <b>{target}</b></span>
+      </div>
+    </div>
+  );
+}
 
 export function FluidsRocks({ field }: { field: SearchEntry }) {
   const { basis, ready } = useFluidBasis();
@@ -232,12 +380,7 @@ function PvtPane({ init }: { init: DynamicInitialization }) {
     <div className="frx-body pane-pvt">
       <section className="frx-panel main">
         <header><span className="frx-ic"><LineChart size={12} /></span><b>Oil formation volume factor and solution gas</b></header>
-        <div className="frx-plot"><PvtChart pvt={p} pb={a.pb} pi={a.pi} /></div>
-        <div className="frx-legend">
-          <span><i style={{ background: 'var(--teal)' }} />Bo</span>
-          <span><i style={{ background: 'var(--amber,#fbbf24)' }} />Rs</span>
-          <span><i className="dot" style={{ background: 'var(--teal)' }} />the deck anchors — every other point is correlation</span>
-        </div>
+        <PvtChart pvt={p} pb={a.pb} pi={a.pi} />
         <footer>
           <Info size={11} style={{ color: 'var(--teal)' }} />
           The kink at Pb is the physics, not a plotting artefact: below it gas leaves solution so Rs and Bo both fall
@@ -248,12 +391,7 @@ function PvtPane({ init }: { init: DynamicInitialization }) {
 
       <section className="frx-panel aside">
         <header><span className="frx-ic"><Gauge size={12} /></span><b>Viscosity</b></header>
-        <div className="frx-plot"><ViscosityChart pvt={p} pb={a.pb} pi={a.pi} /></div>
-        <div className="frx-legend">
-          <span><i style={{ background: 'var(--teal)' }} />oil</span>
-          <span><i style={{ background: 'var(--cblue,#60a5fa)' }} />water</span>
-          <span><i style={{ background: 'var(--amber,#fbbf24)' }} />gas</span>
-        </div>
+        <ViscosityChart pvt={p} pb={a.pb} pi={a.pi} />
         <footer>
           <Info size={11} style={{ color: 'var(--teal)' }} />
           At initial conditions the oil is {p.muoAtPi.toFixed(3)} cP against brine at {p.muw.toFixed(3)} cP — a
@@ -265,6 +403,9 @@ function PvtPane({ init }: { init: DynamicInitialization }) {
       <aside className="frx-rail">
         <div className="frx-rail-head"><Database size={11} />PVT basis<em>{a.source.split('—')[0].trim()}</em></div>
         <div className="frx-rail-scroll">
+          <FluidSignature pvt={p} anchors={a} />
+          <PressureState anchors={a} undersaturation={init.equil.undersaturationBar} />
+
           <div className="frx-rail-sec">
             <h4><Droplets size={11} />Deck anchors</h4>
             <div className="frx-kv">
@@ -286,7 +427,7 @@ function PvtPane({ init }: { init: DynamicInitialization }) {
             <h4><Droplets size={11} />Fluid identity</h4>
             <div className="frx-kv">
               <Row label="Oil gravity" value={`${p.api.toFixed(1)} °API`} basis="correlation" />
-              <Row label="Gas gravity" value={p.gammaG.toFixed(3)} basis="correlation" />
+              <Row label="Gas gravity" value={p.gammaG.toFixed(3)} unit="air = 1" basis="correlation" />
               <Row label="Brine salinity" value={`${p.salinityWtPct.toFixed(1)} wt% NaCl`} basis="correlation" />
               <Row label="Bo at Pb" value={`${p.bob.toFixed(4)} rm³/Sm³`} basis="correlation" />
               <Row label="co" value={`${p.co.toExponential(2)} /bar`} basis="correlation" />
@@ -306,17 +447,15 @@ function PvtPane({ init }: { init: DynamicInitialization }) {
 
           <div className="frx-rail-sec">
             <h4><Ruler size={11} />Correlation anchoring</h4>
-            <div className="frx-kv">
-              <Row label="Standing Rs at Pb" value={`${cal.rsPredicted.toFixed(1)} Sm³/Sm³`} basis="correlation" />
-              <Row label="Anchored by" value={`×${cal.rsFactor.toFixed(4)}`} basis="deck" />
-              <Row label="Standing Bo at Rsb" value={`${cal.boPredicted.toFixed(4)}`} basis="correlation" />
-              <Row label="Anchored by" value={`×${cal.boFactor.toFixed(4)}`} basis="deck" />
-            </div>
+            <AnchorBar label="Standing Rs at Pb" predicted={`${cal.rsPredicted.toFixed(1)} Sm³/Sm³`}
+              target={`${a.rsb} Sm³/Sm³`} factor={cal.rsFactor} />
+            <AnchorBar label="Standing Bo at Rsb" predicted={cal.boPredicted.toFixed(4)}
+              target={p.bob.toFixed(4)} factor={cal.boFactor} />
             <p className="frx-note">
-              Standing’s correlation is evaluated at the deck’s own bubble point and then scaled so it passes exactly
-              through it. A factor near 1 means this fluid genuinely behaves like the correlation’s population —
-              here Rs is within {Math.abs((cal.rsFactor - 1) * 100).toFixed(1)}% and Bo within
-              {' '}{Math.abs((cal.boFactor - 1) * 100).toFixed(1)}%, so the shape between anchors can be trusted.
+              Standing’s correlation is evaluated at the deck’s own bubble point, then scaled so it passes exactly
+              through it. The bar is how far it had to move: a needle near the centre means this fluid genuinely
+              behaves like the correlation’s population, so the curve shape <em>between</em> the anchors can be
+              trusted. A needle out at the edge would mean the opposite.
             </p>
           </div>
 
@@ -362,15 +501,7 @@ function ScalPane({ init, basis, over, setOver, scalMoved }: {
           <b>Relative permeability and fractional flow</b>
           <Chip basis={init.scalBasis} />
         </header>
-        <div className="frx-plot">
-          <KrChart scal={s} muw={init.pvt.muw} muo={init.pvt.muoAtPi} welge={w} />
-        </div>
-        <div className="frx-legend">
-          <span><i style={{ background: 'var(--cblue,#60a5fa)' }} />krw</span>
-          <span><i style={{ background: 'var(--teal)' }} />kro</span>
-          <span><i style={{ background: 'var(--purple,#a78bfa)' }} />fw</span>
-          <span style={{ color: 'var(--purple,#a78bfa)' }}><i className="dash" />Welge tangent</span>
-        </div>
+        <KrChart scal={s} muw={init.pvt.muw} muo={init.pvt.muoAtPi} welge={w} />
         <footer>
           <AlertTriangle size={11} />
           <span>
@@ -384,10 +515,8 @@ function ScalPane({ init, basis, over, setOver, scalMoved }: {
 
       <section className="frx-panel aside">
         <header><span className="frx-ic"><Ruler size={12} /></span><b>Capillary transition zone</b></header>
-        <div className="frx-plot">
-          <TransitionChart scal={s} dRho={dRho} phi={init.rock.phi} kMd={init.rock.kMd}
-            owc={init.equil.owc} fwl={init.equil.fwl} />
-        </div>
+        <TransitionChart scal={s} dRho={dRho} phi={init.rock.phi} kMd={init.rock.kMd}
+          owc={init.equil.owc} fwl={init.equil.fwl} />
         <div className="frx-scroll" style={{ flex: '0 0 auto', maxHeight: 168 }}>
           <div className="frx-kv">
             <Row label="Entry pressure" value={`${init.swof[init.swof.length - 1].pc.toFixed(4)} bar`} basis="analogue" />
@@ -442,9 +571,9 @@ function ScalPane({ init, basis, over, setOver, scalMoved }: {
               <div className="frx-kv">
                 <Row label="Buckles number Sw·φ" value={anchor.buckles.toFixed(4)} basis="interpreted" />
                 <Row label={`Swc at φ = ${anchor.phi.toFixed(3)}`} value={`${anchor.low.toFixed(2)} – ${anchor.high.toFixed(2)}`} basis="interpreted" />
-                <Row label="Wells contributing" value={anchor.wells.map((f) => f.well).join(', ') || '—'} basis="interpreted" />
+                <Row label="Wells contributing" value={anchor.wells.map((f) => f.well).join(', ') || '—'} unit="" basis="interpreted" />
                 {anchor.excluded.length > 0 && (
-                  <Row label="Excluded (never reach Swirr)" value={anchor.excluded.join(', ')} basis="interpreted" />
+                  <Row label="Excluded (never reach Swirr)" value={anchor.excluded.join(', ')} unit="" basis="interpreted" />
                 )}
               </div>
               <button className="frx-reset" style={{ marginTop: 8 }}
@@ -515,11 +644,15 @@ function ScalPane({ init, basis, over, setOver, scalMoved }: {
             </h4>
             <div className="frx-kv">
               {wet.criteria.map((c) => (
+                // four cells, like every other row, so the value and verdict columns
+                // line up with the cards above rather than drifting by one track
                 <div key={c.key} className="frx-kv-row">
                   <span title={c.rule}>{c.label}</span>
                   <b>{Number.isFinite(c.value) ? c.value.toFixed(3) : '—'}</b>
-                  <i className={`frx-basis-chip ${c.reads === wet.verdict ? 'b-deck' : 'b-analogue'}`} title={c.rule}>
-                    {c.reads}
+                  <u>{c.key === 'crossover' ? 'Sw' : 'fraction'}</u>
+                  <i className={`frx-basis-chip ${c.reads === wet.verdict ? 'b-deck' : 'b-analogue'}`}
+                    title={`${c.label}: reads ${c.reads} · ${c.rule}`}>
+                    {c.reads === 'water-wet' ? 'W-WET' : c.reads === 'oil-wet' ? 'O-WET' : 'INTER'}
                   </i>
                 </div>
               ))}
@@ -538,13 +671,13 @@ function ScalPane({ init, basis, over, setOver, scalMoved }: {
           <div className="frx-rail-sec">
             <h4><LineChart size={11} />What these endpoints imply</h4>
             <div className="frx-kv">
-              <Row label="Mobility ratio M" value={init.mobilityRatio.toFixed(3)} basis="correlation" />
-              <Row label="Displacement efficiency" value={pct(init.displacementEfficiency)} basis={init.scalBasis} />
-              <Row label="Shock front Swf" value={w.swf.toFixed(3)} basis={init.scalBasis} />
-              <Row label="fw at the front" value={pct(w.fwf)} basis={init.scalBasis} />
-              <Row label="Avg Sw at breakthrough" value={w.swAvgBt.toFixed(3)} basis={init.scalBasis} />
-              <Row label="PVI at breakthrough" value={w.pviBt.toFixed(3)} basis={init.scalBasis} />
-              <Row label="Recovery at breakthrough" value={pct(w.recoveryBt)} basis={init.scalBasis} />
+              <Row label="Mobility ratio, M" value={init.mobilityRatio.toFixed(3)} unit="end-point" basis="correlation" />
+              <Row label="Displacement efficiency, ED" value={(init.displacementEfficiency * 100).toFixed(1)} unit="%" basis={init.scalBasis} />
+              <Row label="Shock front, Swf" value={w.swf.toFixed(3)} unit="fraction" basis={init.scalBasis} />
+              <Row label="fw at the front" value={(w.fwf * 100).toFixed(1)} unit="%" basis={init.scalBasis} />
+              <Row label="Avg Sw at breakthrough" value={w.swAvgBt.toFixed(3)} unit="fraction" basis={init.scalBasis} />
+              <Row label="PVI at breakthrough" value={w.pviBt.toFixed(3)} unit="PV" basis={init.scalBasis} />
+              <Row label="Recovery at breakthrough" value={(w.recoveryBt * 100).toFixed(1)} unit="% OOIP" basis={init.scalBasis} />
             </div>
             <p className="frx-note">
               {init.mobilityRatio < 1
@@ -554,7 +687,7 @@ function ScalPane({ init, basis, over, setOver, scalMoved }: {
           </div>
           <div className="frx-rail-sec">
             <h4><Ruler size={11} />Capillary pressure</h4>
-            <div className="frx-plot" style={{ height: 150, padding: 0 }}><PcChart swof={init.swof} scal={s} /></div>
+            <div style={{ height: 148, display: 'flex', flexDirection: 'column' }}><PcChart swof={init.swof} scal={s} /></div>
           </div>
         </div>
       </aside>
@@ -581,15 +714,7 @@ function InitPane({ init, basis, over, setOver, rockMoved }: {
           <span className="frx-ic"><Gauge size={12} /></span>
           <b>Pressure against depth — the equilibration, checked against the gauges</b>
         </header>
-        <div className="frx-plot">
-          <PressureDepthChart init={init} points={init.pressurePoints} wells={init.wellGradients} />
-        </div>
-        <div className="frx-legend">
-          <span><i style={{ background: 'var(--teal)' }} />modelled oil gradient {eq.oilGradient.toFixed(4)} bar/m</span>
-          <span><i style={{ background: 'var(--cblue,#60a5fa)' }} />modelled water gradient {eq.waterGradient.toFixed(4)} bar/m</span>
-          <span><i className="dot" style={{ background: 'var(--ink3)' }} />measured buildup</span>
-          <span><i className="dot" style={{ background: 'transparent', boxShadow: 'inset 0 0 0 1px var(--ink3)' }} />mud column — excluded</span>
-        </div>
+        <PressureDepthChart init={init} points={init.pressurePoints} wells={init.wellGradients} />
         <footer>
           <Info size={11} style={{ color: 'var(--teal)' }} />
           Each well is fitted on its OWN stations. A field-wide fit would be meaningless here: these gauges span
@@ -600,15 +725,15 @@ function InitPane({ init, basis, over, setOver, rockMoved }: {
 
       <section className="frx-panel aside">
         <header><span className="frx-ic"><Ruler size={12} /></span><b>Initial saturation and in place</b></header>
-        <div className="frx-plot" style={{ maxHeight: 250 }}><InitSwChart init={init} /></div>
+        <div style={{ flex: '0 0 auto', height: 232, display: 'flex', flexDirection: 'column' }}><InitSwChart init={init} /></div>
         <div className="frx-scroll">
           <div className="frx-sec">Equilibration</div>
           <div className="frx-kv">
-            <Row label="Datum" value={`${eq.datumTvdss} m · ${eq.datumPressure} bara`} basis="deck" />
+            <Row label="Datum" value={`${eq.datumTvdss} m · ${eq.datumPressure} bara`} unit="" basis="deck" />
             <Row label="Oil–water contact" value={eq.owc != null ? `${eq.owc} m TVDSS` : 'none in delivery'} basis="user" />
             <Row label="Free-water level" value={eq.fwl != null ? `${eq.fwl.toFixed(1)} m TVDSS` : '—'} basis="correlation" />
             <Row label="Pressure at the contact" value={eq.contactPressure != null ? `${eq.contactPressure.toFixed(1)} bara` : '—'} basis="correlation" />
-            <Row label="State at initial" value={`${eq.saturationState} by ${eq.undersaturationBar.toFixed(0)} bar`} basis="deck" />
+            <Row label="State at initial" value={eq.undersaturationBar.toFixed(0)} unit={`bar ${eq.saturationState}`} basis="deck" />
           </div>
           {eq.deckContactNote && <p className="frx-note">{eq.deckContactNote}</p>}
 
@@ -626,7 +751,7 @@ function InitPane({ init, basis, over, setOver, rockMoved }: {
                   <Row label="Difference" value={`${rec.deltaPct > 0 ? '+' : ''}${rec.deltaPct.toFixed(1)}%`} basis="correlation" />
                 )}
                 {rec?.rfOfficial != null && (
-                  <Row label="Recovery factor achieved" value={pct(rec.rfOfficial)} basis="regulator" />
+                  <Row label="Recovery factor achieved" value={(rec.rfOfficial * 100).toFixed(1)} unit="%" basis="regulator" />
                 )}
                 {init.volumetrics.giipBcm != null && (
                   <Row label="Solution gas in place" value={`${init.volumetrics.giipBcm.toFixed(3)} Bcm`} basis="correlation" />
@@ -774,17 +899,17 @@ function CasePane({ init, fails, warns }: {
         <div className="frx-scroll">
           <div className="frx-sec">What the simulator receives</div>
           <div className="frx-kv">
-            <Row label="Swc / Sor" value={`${sim.swc.toFixed(2)} / ${sim.sor.toFixed(2)}`} basis={init.scalBasis} />
-            <Row label="krw / kro end points" value={`${sim.krwMax.toFixed(2)} / ${sim.kroMax.toFixed(2)}`} basis={init.scalBasis} />
-            <Row label="Corey nw / no" value={`${sim.nw} / ${sim.no}`} basis={init.scalBasis} />
-            <Row label="μw / μo" value={`${sim.muw.toFixed(3)} / ${sim.muo.toFixed(3)} cP`} basis="correlation" />
-            <Row label="Viscosity ratio" value={`${sim.muRatio.toFixed(2)}×`} basis="correlation" />
-            <Row label="Bo / Bw" value={`${sim.bo.toFixed(3)} / ${sim.bw.toFixed(3)}`} basis="deck" />
-            <Row label="φ / N:G" value={`${sim.phi.toFixed(3)} / ${sim.ntg.toFixed(2)}`} basis={init.rock.basis.phi} />
+            <Row label="Swc / Sor" value={`${sim.swc.toFixed(2)} / ${sim.sor.toFixed(2)}`} unit="fraction" basis={init.scalBasis} />
+            <Row label="krw / kro end points" value={`${sim.krwMax.toFixed(2)} / ${sim.kroMax.toFixed(2)}`} unit="fraction" basis={init.scalBasis} />
+            <Row label="Corey nw / no" value={`${sim.nw} / ${sim.no}`} unit="exponent" basis={init.scalBasis} />
+            <Row label="μw / μo" value={`${sim.muw.toFixed(3)} / ${sim.muo.toFixed(3)}`} unit="cP" basis="correlation" />
+            <Row label="Viscosity ratio" value={sim.muRatio.toFixed(2)} unit="μo/μw" basis="correlation" />
+            <Row label="Bo / Bw" value={`${sim.bo.toFixed(3)} / ${sim.bw.toFixed(3)}`} unit="rm³/Sm³" basis="deck" />
+            <Row label="φ / N:G" value={`${sim.phi.toFixed(3)} / ${sim.ntg.toFixed(2)}`} unit="fraction" basis={init.rock.basis.phi} />
             <Row label="Permeability" value={`${sim.kMd} mD`} basis={init.rock.basis.kMd} />
-            <Row label="Initial pressure" value={`${sim.pInit} bara at ${sim.datumTvdss} m`} basis="deck" />
-            <Row label="Initial Sw" value={sim.swInit.toFixed(2)} basis={init.rock.basis.sw} />
-            <Row label="Contact" value={sim.owc != null ? `${sim.owc} m TVDSS` : 'none'} basis="user" />
+            <Row label="Initial pressure" value={`${sim.pInit} @ ${sim.datumTvdss} m`} unit="bara" basis="deck" />
+            <Row label="Initial Sw" value={sim.swInit.toFixed(2)} unit="fraction" basis={init.rock.basis.sw} />
+            <Row label="Contact" value={sim.owc != null ? String(sim.owc) : 'none'} unit={sim.owc != null ? 'm TVDSS' : ''} basis="user" />
           </div>
           <p className="frx-note">
             These eleven rows are the whole seam. The FV/streamline engine, recovery screening and the forecast read
@@ -804,8 +929,8 @@ function CasePane({ init, fails, warns }: {
 
           <div className="frx-sec">Provenance of this case</div>
           <div className="frx-kv">
-            <Row label="PVT" value="11 deck anchors + Standing / Beggs–Robinson / Vazquez–Beggs / DAK / McCain" basis="deck" />
-            <Row label="SCAL" value={init.scalBasis === 'analogue' ? 'water-wet North Sea analogue — no core delivered' : 'edited on this tab'} basis={init.scalBasis} />
+            <Row label="PVT" value="11 deck anchors + Standing / Beggs–Robinson / Vazquez–Beggs / DAK / McCain" unit="" basis="deck" />
+            <Row label="SCAL" value={init.scalBasis === 'analogue' ? 'water-wet North Sea analogue — no core delivered' : 'edited on this tab'} unit="" basis={init.scalBasis} />
             <Row label="Rock" value={`φ, N:G, Sw from the delivery; k ${init.rock.basis.kMd}`} basis={init.rock.basis.phi} />
             <Row label="Initialization" value={`checked against ${init.pressurePoints.filter((p) => p.quality !== 'column').length} gauge buildups`} basis="measured" />
           </div>

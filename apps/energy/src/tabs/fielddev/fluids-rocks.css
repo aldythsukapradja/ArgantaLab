@@ -42,25 +42,66 @@ html[data-ui="cosmo"] .frx-panel>header{display:flex;align-items:center;gap:7px;
 html[data-ui="cosmo"] .frx-panel>header b{flex:1;min-width:0;font-size:10.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html[data-ui="cosmo"] .frx-ic{display:flex;color:var(--teal)}
 html[data-ui="cosmo"] .frx-scroll{flex:1;min-height:0;overflow:auto;padding:10px 11px}
-html[data-ui="cosmo"] .frx-plot{flex:1;min-height:0;display:flex;padding:6px 8px}
-html[data-ui="cosmo"] .frx-plot svg{width:100%;height:100%}
+/* Charts size themselves to this box via ResizeObserver, so it must be a real flex
+   child with a resolvable height — `min-height:0` is what lets it shrink inside the
+   panel instead of forcing the panel to grow to the SVG's intrinsic size. */
+html[data-ui="cosmo"] .frx-chart{flex:1;min-width:0;min-height:0;display:block;overflow:hidden;padding:4px 6px 0}
 html[data-ui="cosmo"] .frx-panel>footer{display:flex;align-items:flex-start;gap:5px;flex:0 0 auto;padding:7px 11px;border-top:1px solid var(--line2);background:var(--panel2);font-size:8.5px;line-height:1.5;color:var(--ink3)}
 html[data-ui="cosmo"] .frx-panel>footer svg{flex:0 0 auto;margin-top:2px;color:var(--amber,#fbbf24)}
 
-/* provenance chip — the same vocabulary the rest of the platform uses */
-html[data-ui="cosmo"] .frx-basis-chip{flex:0 0 auto;padding:1px 6px;border:1px solid var(--line);border-radius:4px;font:7.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);cursor:help}
+/* provenance chip — a fixed 4-character code so it never widens the row */
+html[data-ui="cosmo"] .frx-basis-chip{display:inline-block;flex:0 0 auto;width:34px;box-sizing:border-box;overflow:hidden;padding:1px 0;border:1px solid var(--line);border-radius:4px;font:7px/1.5 var(--mono);letter-spacing:.04em;text-align:center;text-transform:uppercase;color:var(--ink3);cursor:help;font-style:normal}
 html[data-ui="cosmo"] .frx-basis-chip.b-deck{border-color:var(--teal);color:var(--teal-ink)}
 html[data-ui="cosmo"] .frx-basis-chip.b-measured{border-color:var(--green,#4ade80);color:var(--green,#4ade80)}
 html[data-ui="cosmo"] .frx-basis-chip.b-correlation{border-color:var(--purple,#a78bfa);color:var(--purple,#a78bfa)}
 html[data-ui="cosmo"] .frx-basis-chip.b-analogue{border-color:var(--amber,#fbbf24);background:color-mix(in srgb,var(--amber,#fbbf24) 12%,transparent);color:var(--amber,#fbbf24)}
 html[data-ui="cosmo"] .frx-basis-chip.b-user{border-color:var(--cblue,#60a5fa);color:var(--cblue,#60a5fa)}
+html[data-ui="cosmo"] .frx-basis-chip.b-interpreted{border-color:var(--purple,#a78bfa);color:var(--purple,#a78bfa)}
 html[data-ui="cosmo"] .frx-basis-chip.b-regulator{border-color:var(--ink3)}
 
+/* ── charts ──────────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .frx-svg{display:block}
+html[data-ui="cosmo"] .frx-svg text{font-family:var(--mono);fill:var(--ink3)}
+html[data-ui="cosmo"] .frx-grid line{stroke:var(--line2);stroke-dasharray:2 4;opacity:.5}
+html[data-ui="cosmo"] .frx-axis line{stroke:var(--line)}
+html[data-ui="cosmo"] .frx-axis text{font-size:8.5px;font-variant-numeric:tabular-nums}
+html[data-ui="cosmo"] .frx-axis-title{font-size:9px;fill:var(--ink2);letter-spacing:.03em}
+html[data-ui="cosmo"] .frx-ref{stroke-width:1;stroke-dasharray:4 3;opacity:.85}
+html[data-ui="cosmo"] .frx-ref-label{font-size:8.5px}
+html[data-ui="cosmo"] .frx-mark{font-size:8.5px}
+html[data-ui="cosmo"] .frx-anchor{stroke:var(--panel);stroke-width:1.4}
+html[data-ui="cosmo"] .frx-cross{stroke:var(--ink3);stroke-width:1;stroke-dasharray:3 3;opacity:.8;pointer-events:none}
+html[data-ui="cosmo"] .frx-pt{cursor:pointer}
+html[data-ui="cosmo"] .frx-pt:hover{stroke-width:2.4}
+html[data-ui="cosmo"] .frx-band{opacity:.07}
+html[data-ui="cosmo"] .frx-band.w{fill:var(--cblue,#60a5fa)}
+html[data-ui="cosmo"] .frx-band.o{fill:var(--teal)}
+html[data-ui="cosmo"] .frx-band-label{font-size:8px}
+html[data-ui="cosmo"] .frx-fill{opacity:.1;stroke:none}
+html[data-ui="cosmo"] .frx-fill.w{fill:var(--cblue,#60a5fa)}
+
+/* hover readout */
+html[data-ui="cosmo"] .frx-tip{padding:5px 7px;border:1px solid var(--line);border-radius:7px;background:var(--panel);box-shadow:0 6px 18px rgba(0,0,0,.28)}
+html[data-ui="cosmo"] .frx-tip>b{display:block;margin-bottom:3px;font:8.5px var(--mono);color:var(--ink);letter-spacing:.03em}
+html[data-ui="cosmo"] .frx-tip>i{display:flex;align-items:center;gap:5px;font-style:normal;line-height:1.45}
+html[data-ui="cosmo"] .frx-tip>i>em{flex:0 0 auto;width:7px;height:2.5px;border-radius:2px}
+html[data-ui="cosmo"] .frx-tip>i>span{flex:1;min-width:0;font-size:8px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .frx-tip>i>u{font:8.5px var(--mono);text-decoration:none;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+
 /* ── key/value readouts ──────────────────────────────────────────────────── */
-html[data-ui="cosmo"] .frx-kv{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;gap:4px 8px;margin:0}
-html[data-ui="cosmo"] .frx-kv>span{font-size:9px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-html[data-ui="cosmo"] .frx-kv>b{font:10px var(--mono);font-weight:600;color:var(--ink);text-align:right}
+/* ONE LINE PER PARAMETER: label · value · unit · provenance.
+   Four fixed tracks so values right-align against each other and units form a real
+   column. Nothing wraps — a long label ellipsizes and keeps its full text in a
+   tooltip, which is what stopped "Solution GOR at Pb" spilling onto a second row. */
+html[data-ui="cosmo"] .frx-kv{display:grid;grid-template-columns:minmax(0,1fr) auto 62px 34px;align-items:baseline;gap:0 7px;margin:0}
 html[data-ui="cosmo"] .frx-kv-row{display:contents}
+html[data-ui="cosmo"] .frx-kv-row>*{padding:3px 0;border-top:1px solid var(--line2)}
+html[data-ui="cosmo"] .frx-kv-row:first-child>*{border-top:0}
+html[data-ui="cosmo"] .frx-kv>span{min-width:0;font-size:9px;line-height:1.35;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .frx-kv>b{font:10.5px/1.35 var(--mono);font-weight:600;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+html[data-ui="cosmo"] .frx-kv>u{font:8.5px/1.35 var(--mono);text-decoration:none;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .frx-kv>i{font-style:normal}
+html[data-ui="cosmo"] .frx-kv-row:hover>*{background:var(--panel2)}
 html[data-ui="cosmo"] .frx-sec{margin:0 0 4px;padding-top:10px;font:7.5px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--teal)}
 html[data-ui="cosmo"] .frx-sec:first-child{padding-top:0}
 html[data-ui="cosmo"] .frx-note{margin:7px 0 0;font-size:8.5px;line-height:1.55;color:var(--ink3)}
@@ -124,3 +165,77 @@ html[data-ui="cosmo"] .frx-legend i.dash{background:none;border-top:2px dashed c
   html[data-ui="cosmo"] .frx-body.pane-init{grid-template-columns:minmax(0,1fr) minmax(0,.8fr);grid-template-areas:"main aside" "rail rail"}
   html[data-ui="cosmo"] .frx-rail{min-height:300px}
 }
+
+/* ── PVT basis rail: the fluid's signature ───────────────────────────────────
+   The rail used to open with eleven identically-weighted rows, so the facts that
+   characterise the fluid sat at the same visual weight as the datum depth. These
+   three blocks put the characterising numbers first and on SCALES, because a value
+   like "28.9 °API" only means something against the range it lives in. */
+
+html[data-ui="cosmo"] .frx-sig{padding:11px 11px 12px;border-bottom:1px solid var(--line2);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 7%,transparent),transparent 78%)}
+html[data-ui="cosmo"] .frx-sig-hero{display:flex;align-items:baseline;gap:5px}
+html[data-ui="cosmo"] .frx-sig-hero b{font:26px/1 var(--mono);font-weight:600;letter-spacing:-.02em;color:var(--ink)}
+html[data-ui="cosmo"] .frx-sig-hero span{font:10px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .frx-sig-band{margin-left:auto;padding:2px 7px;border-radius:20px;font:7.5px var(--mono);font-style:normal;letter-spacing:.08em;text-transform:uppercase}
+html[data-ui="cosmo"] .frx-sig-band.heavy{background:color-mix(in srgb,#b45309 22%,transparent);color:#fbbf24}
+html[data-ui="cosmo"] .frx-sig-band.medium{background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .frx-sig-band.light{background:color-mix(in srgb,#4ade80 18%,transparent);color:#4ade80}
+
+/* the API scale — heavy to light, with the fluid's needle on it */
+html[data-ui="cosmo"] .frx-sig-scale{position:relative;height:20px;margin:9px 0 3px}
+html[data-ui="cosmo"] .frx-sig-track{position:absolute;inset:0 0 auto;height:5px;border-radius:3px;
+  background:linear-gradient(90deg,#7c2d12,#b45309 30%,var(--teal) 62%,#4ade80)}
+html[data-ui="cosmo"] .frx-sig-needle{position:absolute;top:-3px;width:2px;height:11px;margin-left:-1px;border-radius:1px;
+  background:var(--ink);box-shadow:0 0 0 1.5px var(--panel)}
+html[data-ui="cosmo"] .frx-sig-scale u{position:absolute;top:9px;font:7px var(--mono);text-decoration:none;color:var(--ink3)}
+
+html[data-ui="cosmo"] .frx-sig-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}
+html[data-ui="cosmo"] .frx-sig-grid>div{min-width:0;padding:6px 7px;border:1px solid var(--line2);border-radius:7px;background:var(--panel);cursor:help}
+html[data-ui="cosmo"] .frx-sig-grid b{display:block;font:12px/1.1 var(--mono);font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+html[data-ui="cosmo"] .frx-sig-grid i{display:block;margin-top:1px;font:7px var(--mono);font-style:normal;color:var(--ink3)}
+html[data-ui="cosmo"] .frx-sig-grid span{display:block;margin-top:4px;font-size:7.5px;line-height:1.2;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* surface densities, drawn to scale against each other */
+html[data-ui="cosmo"] .frx-sig-rho{margin-top:9px}
+html[data-ui="cosmo"] .frx-sig-rho>div{display:grid;grid-template-columns:34px minmax(0,1fr) 40px;align-items:center;gap:6px;padding:2px 0;cursor:help}
+html[data-ui="cosmo"] .frx-sig-rho span{font-size:7.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .frx-sig-rho i{display:block;height:5px;border-radius:3px;background:var(--line2);overflow:hidden}
+html[data-ui="cosmo"] .frx-sig-rho em{display:block;height:100%;border-radius:3px}
+html[data-ui="cosmo"] .frx-sig-rho u{font:8.5px var(--mono);text-decoration:none;text-align:right;color:var(--ink2);font-variant-numeric:tabular-nums}
+
+/* ── reservoir state: saturated vs undersaturated, as a track ─────────────── */
+html[data-ui="cosmo"] .frx-state{padding:10px 11px 11px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .frx-state-head{display:flex;align-items:baseline;gap:6px}
+html[data-ui="cosmo"] .frx-state-head span{font:7.5px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--teal)}
+html[data-ui="cosmo"] .frx-state-head em{margin-left:auto;font:8.5px var(--mono);font-style:normal}
+html[data-ui="cosmo"] .frx-state-head em.good{color:var(--green,#4ade80)}
+html[data-ui="cosmo"] .frx-state-head em.bad{color:var(--amber,#fbbf24)}
+html[data-ui="cosmo"] .frx-state-track{position:relative;height:14px;margin:8px 0 6px;border-radius:4px;background:var(--line2);overflow:hidden}
+html[data-ui="cosmo"] .frx-state-sat{position:absolute;top:0;bottom:0;left:0;background:color-mix(in srgb,var(--amber,#fbbf24) 26%,transparent)}
+html[data-ui="cosmo"] .frx-state-und{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--teal) 34%,transparent)}
+html[data-ui="cosmo"] .frx-state-mark{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px}
+html[data-ui="cosmo"] .frx-state-mark.pb{background:var(--purple,#a78bfa)}
+html[data-ui="cosmo"] .frx-state-mark.pi{background:var(--teal)}
+html[data-ui="cosmo"] .frx-state-legend{display:flex;gap:10px}
+html[data-ui="cosmo"] .frx-state-legend span{font:8px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .frx-state-legend b{font-weight:600}
+html[data-ui="cosmo"] .frx-state-legend .pb b{color:var(--purple,#a78bfa)}
+html[data-ui="cosmo"] .frx-state-legend .pi b{color:var(--teal)}
+html[data-ui="cosmo"] .frx-state-legend .t{margin-left:auto}
+
+/* ── correlation anchoring: deviation from 1, not a raw factor ────────────── */
+html[data-ui="cosmo"] .frx-anchorbar{margin:0 0 10px}
+html[data-ui="cosmo"] .frx-anchorbar:last-of-type{margin-bottom:4px}
+html[data-ui="cosmo"] .frx-anchorbar-head{display:flex;align-items:baseline;gap:6px}
+html[data-ui="cosmo"] .frx-anchorbar-head span{min-width:0;font-size:8.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .frx-anchorbar-head b{margin-left:auto;font:9.5px var(--mono);font-variant-numeric:tabular-nums}
+html[data-ui="cosmo"] .frx-anchorbar-head b.good{color:var(--green,#4ade80)}
+html[data-ui="cosmo"] .frx-anchorbar-head b.warn{color:var(--amber,#fbbf24)}
+html[data-ui="cosmo"] .frx-anchorbar-track{position:relative;height:8px;margin:5px 0 4px;border-radius:4px;background:var(--line2);cursor:help;overflow:hidden}
+html[data-ui="cosmo"] .frx-anchorbar-zero{position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--ink3);opacity:.6}
+html[data-ui="cosmo"] .frx-anchorbar-fill{position:absolute;top:0;bottom:0;background:var(--teal)}
+html[data-ui="cosmo"] .frx-anchorbar-fill.warn{background:var(--amber,#fbbf24)}
+html[data-ui="cosmo"] .frx-anchorbar-foot{display:flex;justify-content:space-between;gap:8px}
+html[data-ui="cosmo"] .frx-anchorbar-foot span{font-size:7.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .frx-anchorbar-foot b{font:8px var(--mono);font-weight:500;color:var(--ink2)}

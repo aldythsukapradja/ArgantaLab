@@ -30,6 +30,7 @@ import { AssetDossier } from './AssetDossier';
 import { DataExplorer } from './DataExplorer';
 import { Petrophysics } from './Petrophysics';
 import { FluidsRocks } from './FluidsRocks';
+import { Simulation } from './Simulation';
 import { StaticModel } from './StaticModel';
 import { InputTree } from './InputTree';
 import type { Sel } from '../../cosmo/CosmoExplorer';
@@ -53,6 +54,23 @@ const LEGACY_TABS = [
   { id: 'forecast', label: 'Forecast', icon: LineChart }, { id: 'economics', label: 'Economics', icon: DollarSign },
   { id: 'review', label: 'Field Review', icon: ClipboardCheck },
 ];
+
+/**
+ * Stages that do NOT get the Input tree.
+ *
+ * The tree is an inventory of the delivery's spatial objects — wells, logs, surfaces,
+ * picks — and it is a control: clicking a surface drapes it, clicking a top flattens
+ * on it. A stage earns the tree by being able to act on those objects.
+ *
+ * Fluids & Rock cannot. Its inputs are the PVT block, the contacts and the pressure
+ * records, none of which the tree offers a verb for, and its own rail already carries
+ * every parameter the stage can change. A tree that greys out nine of its eleven
+ * folders and does nothing when you click the other two is a 180px column of noise.
+ * The Static Model likewise brings its own object tree.
+ */
+// Surfaces that carry their own tree. Showing the shared Input rail beside one
+// puts two trees of the same data on screen and costs the canvas 200 px.
+const NO_INPUT_TREE = new Set(['static-model-lite', 'fluids-rock', 'simulation-cases']);
 
 export function FieldDevShell({ driveLegacyTab, driveLegacyNonce }: {
   /** guided-tour hooks — CosmoChat drives Legacy directly through these */
@@ -186,9 +204,14 @@ export function FieldDevShell({ driveLegacyTab, driveLegacyNonce }: {
         </div>
       )}
       {mode === 'knowledge' ? <AssetDossier field={field} /> : (
-        <div className="wsb-layout">
+        <div className={'wsb-layout' + (NO_INPUT_TREE.has(stage.id) ? ' no-drawer' : '')}>
+          {/* The Static Model carries its own Model tree, which lists the same wells,
+              surfaces and contacts plus the zones, properties and realisation the Input
+              tree cannot know about. Showing both puts two trees of the same data on
+              the same screen and costs the canvas 200 px for the privilege.
+              Fluids & Rock has no use for it at all — see NO_INPUT_TREE. */}
           <WorkflowRibbon groups={FIELDDEV_WORKFLOWS} active={stageId} onSelect={setStageId} label="Field Development"
-            drawer={<InputTree stageId={stageId} />} />
+            drawer={NO_INPUT_TREE.has(stage.id) ? null : <InputTree stageId={stageId} />} />
           {stage.id === 'client-data-qc' ? (
             // The first stage is no longer a blueprint card — it is the real, shared
             // client-data interface.
@@ -202,6 +225,11 @@ export function FieldDevShell({ driveLegacyTab, driveLegacyNonce }: {
             // the static modelling workflow: its shell canvas is real and its cell
             // budget is live arithmetic; the GeaVision Studio viewport is S2.
             <StaticModel field={field} />
+          ) : stage.id === 'simulation-cases' ? (
+            // The dynamic CORE: case → initialise → schedule → run → history match →
+            // forecast. It wears the same shell as the Static Model, from the same
+            // `studio-shell` code, so the two cannot drift apart.
+            <Simulation field={field} />
           ) : stage.id === 'fluids-rock' ? (
             // The dynamic model's rock-fluid basis is REAL: the delivery's own PVT
             // block, the rock-fluid functions over it, and the equilibration —

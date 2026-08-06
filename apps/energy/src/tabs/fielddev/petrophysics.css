@@ -8,6 +8,7 @@ html[data-ui="cosmo"] .pps{display:flex;min-width:0;min-height:0;flex-direction:
 /* ── header ─────────────────────────────────────────────────────────────── */
 html[data-ui="cosmo"] .pps-bar{display:flex;align-items:center;gap:9px;flex:0 0 auto;padding:7px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
 html[data-ui="cosmo"] .pps-title{font-size:11px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .pps-sub.lead{font-size:10.5px;font-weight:600;color:var(--ink2)}
 html[data-ui="cosmo"] .pps-sub{min-width:0;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink3)}
 html[data-ui="cosmo"] .pps-spacer{flex:1}
 html[data-ui="cosmo"] .pps-panes{display:flex;flex:0 0 auto;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}

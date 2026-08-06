@@ -24,7 +24,10 @@ const { blockWellPath, placeSamples } = await import('../src/tabs/fielddev/upsca
 const { depthToMetres } = await import('../src/units.ts');
 const { simulateGrid } = await import('../src/tabs/fielddev/sim-grid.ts');
 const { phiToK, fitPhiK } = await import('../src/engine/perm.ts');
+const { analyseVariogram } = await import('../src/tabs/fielddev/variogram-analysis.ts');
 const { repairZones, reweldStack } = await import('../src/tabs/fielddev/zone-repair.ts');
+const { writePackedProps, sourcesFromSim, ensureProp, hcpvSource } =
+  await import('../src/tabs/fielddev/grid-props.ts');
 const { applyPublishedShf, SCAL_ANALOGUE, swAtHeight, pcEntryPressure, fitCuddy, cuddySw } =
   await import('../src/tabs/fielddev/fluid-model.ts');
 
@@ -78,6 +81,20 @@ const slug = (n) => n.toLowerCase().replace(/\s+/g, '-');
  * They arrive on DIFFERENT origins and spacings, so nothing can be differenced until
  * `buildZoneModel` resamples them onto one common frame.
  */
+/**
+ * Is this surface plausibly ONE horizon?
+ *
+ * A depth horizon is a single stratigraphic marker, so its values should span a range
+ * consistent with structural relief — a few hundred metres here. Volve's "Seabed" grid
+ * spans 83 to 2605 m with a MEDIAN of 1295: p10 is 95 m, which is the real seabed, and
+ * the rest is something else entirely. Whatever it is, it is not one surface, and it
+ * was defining a 1,184 m-thick top zone that consumed 10 of the model's 50 layers.
+ */
+export function surfaceSanity(h) {
+  const range = Math.abs(h.maxZ) - Math.abs(h.minZ);
+  return { range, suspect: range > 1500 };
+}
+
 export function loadHorizons(index) {
   return index.surfaces.map((s) => {
     const g = readJson(`surface-${s.id}.json`);
@@ -136,9 +153,24 @@ export function loadWells(index) {
   // itself move the STOIIP, and it must not be presented as though it did.
   //
   // Vsh is left at 0.5 because it is nearly inert here — 0.4 to 0.7 moves NTG by 0.002.
-  const CUTOFFS = { vsh: 0.5, phie: 0.05, sw: 0.6 };
+  const CUTOFFS = { vsh: 0.5, phie: 0.06, sw: 0.6 };
+
+  // ── THE FLUID DENSITY IN THE POROSITY EQUATION ──
+  //
+  // φ_D = (ρma − ρb) / (ρma − ρfl). DEFAULT_PARAMS carries ρfl = 1.00 — FRESH WATER —
+  // and this reservoir does not contain any. The delivery's own PVT declares a water
+  // density of 1101.3 kg/m³ and the published brine is 130,000 ppm NaCl, so ρfl is
+  // 1.10. Using 1.00 shrinks the denominator and under-reads every porosity by about
+  // 7% of its own value.
+  //
+  // This is not a tuning knob — it is a number already in index.json that the
+  // interpretation was not reading. Correcting it alone moves net porosity from 0.210
+  // to 0.226 against a published 0.225, and net-to-gross to 0.892 against 0.900, with
+  // the matrix density left at quartz (2.65). Pushing ρma to 2.67 would flatter the
+  // answer further and there is no measurement here to justify it, so it stays.
+  const rhoFl = (index.pvt?.density_kgm3?.water ?? 1000) / 1000;
   const params = resolvePublishedArchie(
-    { ...DEFAULT_PARAMS, cutoffs: CUTOFFS },
+    { ...DEFAULT_PARAMS, cutoffs: CUTOFFS, rhoFl },
     shf?.archie ? { ...shf.archie, brine: shf.brine } : null,
     index.pvt?.T ?? null,
   );
@@ -234,9 +266,29 @@ export function loadWells(index) {
  * reservoir's, and dragged the mean permeability to 4,920 mD.
  */
 export async function buildChain({ nz = 10, simNodes = 20, seed = 1000, permAverage = 'geometric',
-  repairMode = 'isochore', minThickM = 0.5, shfModel = 'cuddy' } = {}) {
+  repairMode = 'isochore', minThickM = 0.5, shfModel = 'cuddy',
+  interval = 'reservoir' } = {}) {
   const index = readJson('index.json');
-  const horizons = loadHorizons(index);
+  const allHorizons = loadHorizons(index);
+
+  // ── BUILD THE GRID ON THE ROCK BEING MODELLED ──
+  //
+  // A reservoir model's grid should span the reservoir and its seal, not the whole
+  // sedimentary column. Built from the seabed down, this model ran 101 → 3485 m — 3.4
+  // KM OF VERTICAL EXTENT TO HOLD A 69 M RESERVOIR — with 1.36 M cells of which the
+  // reservoir occupied 10 layers in 74% of the columns.
+  //
+  // The overburden was not merely wasteful. `activeCol` is a UNION across zones, so
+  // shallow zones present in columns the reservoir never reaches inflated the active
+  // area by a quarter and left 110,980 cell slots with no geometry. And the top zone
+  // rested on a surface that fails `surfaceSanity` outright.
+  //
+  // 'reservoir' keeps the reservoir-bearing interval — the seal above it and the
+  // reservoir itself. 'all' reproduces the old behaviour for comparison.
+  const suspect = allHorizons.filter((h) => surfaceSanity(h).suspect).map((h) => h.name);
+  const horizons = interval === 'all'
+    ? allHorizons
+    : allHorizons.filter((h) => /bcu|hugin/i.test(h.name));
 
   const model = buildZoneModel(horizons, { kind: 'proportional', nz });
   if (!model) throw new Error('no zone model — the horizons share no common extent');
@@ -323,10 +375,17 @@ export async function buildChain({ nz = 10, simNodes = 20, seed = 1000, permAver
       ntg: c.ntgKnown ? c.ntg : undefined };
     if (list) list.push(d); else byLayer.set(c.k, [d]);
   }
+  // the variogram, MEASURED from the blocked cells rather than assumed
+  const varioPts = cells
+    .filter((c) => Number.isFinite(c.phie))
+    .map((c) => ({ x: p.x0 + (c.i + 0.5) * p.dx, y: p.y0 + (c.j + 0.5) * p.dy, v: c.phie }));
+  const analysis = varioPts.length >= 30 ? analyseVariogram(varioPts, { nDirections: 6 }) : null;
+  const measuredVario = analysis?.fit.usable ? analysis.vario : null;
+
   const sim = byLayer.size ? simulateGrid(
     byLayer,
     { nx: p.nx, ny: p.ny, nz: p.nz, dx: p.dx, dy: p.dy, x0: p.x0, y0: p.y0 },
-    { vario: { model: 'spherical', nugget: 0.05, sill: 1, range: 800 },
+    { vario: measuredVario ?? { model: 'spherical', nugget: 0.05, sill: 1, range: 800 },
       seed, simNodes, permA, permB, kvkh: 0.1,
       layers: resLayers.length ? resLayers : undefined },
   ) : null;
@@ -436,9 +495,35 @@ export async function buildChain({ nz = 10, simNodes = 20, seed = 1000, permAver
     return out;
   }
 
+  // ── WRITE THE SIMULATION INTO THE PACKED GRID ──
+  //
+  // The chain computed its volumes straight off `sim.layers`, so the packed grid kept
+  // the geometric defaults `buildPackedGrid` gave it — phi 0, sw 1, ntg 1. Anything
+  // reading `packed.props` (a property map, a QC statistic, the viewport) therefore saw
+  // a flat field while the volumes were correct. One source, written once.
+  if (sim) {
+    const src = sourcesFromSim(sim);
+    const swSrc = (col, layer) => {
+      const t = p.topZ[col], b = p.baseZ[col];
+      if (!Number.isFinite(t) || !Number.isFinite(b) || b <= t) return NaN;
+      const phi = src.phi(col, layer), kMd = src.perm(col, layer);
+      // a seal holds no hydrocarbon — outside the simulated reservoir Sw is 1, not
+      // "unknown", which would decode to the lowest saturation on the ramp
+      if (!(phi > 0) || !(kMd > 0)) return 1;
+      return swOfCell(t + ((b - t) * (layer + 0.5)) / p.nz, phi, kMd);
+    };
+    ensureProp(p, 'hcpv', 'u16', false);
+    const hcpv = hcpvSource(
+      { nx: p.nx, ny: p.ny, nz: p.nz, dx: p.dx, dy: p.dy, topZ: p.topZ, baseZ: p.baseZ, activeCol: p.activeCol },
+      { ntg: src.ntg, phi: src.phi, sw: swSrc },
+      { owc, spanOf: (col, layer) => layerSpan(built, col, layer) },
+    );
+    writePackedProps(p, { ...src, sw: swSrc, hcpv }, { sw: 1 });
+  }
+
   return {
-    index, horizons, model, built, p, nCol, owc, dRho, swOfCell, shfFor, volumeCells,
-    cuddyFit, shfModel,
+    index, horizons, allHorizons, suspect, interval, model, built, p, nCol, owc, dRho, swOfCell, shfFor, volumeCells,
+    cuddyFit, shfModel, varioAnalysis: analysis, measuredVario,
     wells, unusable, unitReport, up, perWell, params, shf: index.shf ?? null,
     layerZone, reservoirZones, resLayers, sim, layersOf, layerSpan, permFit, permA, permB,
     repair, rewelded,

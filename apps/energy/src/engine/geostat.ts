@@ -14,7 +14,20 @@ function mulberry32(seed: number): Rng {
 function gauss(rng: Rng): number { let u = 0, v = 0; while (u === 0) u = rng(); while (v === 0) v = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
 
 export type VarioModel = 'spherical' | 'exponential' | 'gaussian';
-export interface Vario { model: VarioModel; nugget: number; sill: number; range: number } // sill = TOTAL sill
+export interface Vario {
+  model: VarioModel; nugget: number; sill: number; range: number;   // sill = TOTAL sill
+  /**
+   * Geometric anisotropy. Absent = isotropic, and every result is bit-identical to
+   * before this existed.
+   *
+   * `range` is then the MAJOR range and `ratio` is minor/major (0–1]. A deposit is
+   * almost never isotropic — a channel system correlates ten times further along its
+   * axis than across it — and simulating it isotropically produces round blobs where
+   * the geology has ribbons. `azimuthDeg` is the major direction, degrees clockwise
+   * from north, which is how a geologist states it.
+   */
+  aniso?: { azimuthDeg: number; ratio: number };
+}
 export interface Pt { x: number; y: number; v: number }        // conditioning datum (value or 0/1 indicator)
 export interface FaciesPt { x: number; y: number; f: 0 | 1 }   // SAND=1 / SHALE=0
 
@@ -36,11 +49,31 @@ export function variogram(h: number, p: Vario): number {
  * kriging honors data exactly (GSLIB convention). */
 export function cov(h: number, p: Vario): number { return h === 0 ? p.sill : p.sill - variogram(h, p); }
 
-const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
+/**
+ * Separation between two points, in the variogram's own frame.
+ *
+ * With anisotropy the lag is rotated into the major/minor axes and the minor component
+ * is stretched by 1/ratio, so a single isotropic `range` then describes both directions.
+ * This is the standard reduced-distance transform, and doing it here means every
+ * consumer — kriging, SGS, SIS, the neighbour search — becomes anisotropic at once
+ * rather than three of them agreeing and one not.
+ */
+const dist = (a: { x: number; y: number }, b: { x: number; y: number }, p?: Vario) => {
+  const dx = a.x - b.x, dy = a.y - b.y;
+  const an = p?.aniso;
+  if (!an || !(an.ratio > 0) || an.ratio >= 1) return Math.hypot(dx, dy);
+  // azimuth is clockwise from NORTH, so the major axis is (sin, cos)
+  const t = (an.azimuthDeg * Math.PI) / 180;
+  const major = dx * Math.sin(t) + dy * Math.cos(t);
+  const minor = dx * Math.cos(t) - dy * Math.sin(t);
+  return Math.hypot(major, minor / an.ratio);
+};
 /** nearest K conditioning data (keeps kriging O(K³) as the simulated set grows). */
-function nearest<T extends { x: number; y: number }>(data: T[], target: { x: number; y: number }, K: number): T[] {
+function nearest<T extends { x: number; y: number }>(data: T[], target: { x: number; y: number }, K: number, p?: Vario): T[] {
   if (data.length <= K) return data;
-  return data.map((d) => [dist(d, target), d] as [number, T]).sort((a, b) => a[0] - b[0]).slice(0, K).map((e) => e[1]);
+  // the neighbourhood must be anisotropic too, or the search picks points the
+  // variogram then says are uncorrelated
+  return data.map((d) => [dist(d, target, p), d] as [number, T]).sort((a, b) => a[0] - b[0]).slice(0, K).map((e) => e[1]);
 }
 
 // ── dense linear solve (Gaussian elimination, partial pivot) ───────────────────
@@ -60,8 +93,8 @@ export interface KrigeResult { est: number; variance: number; wsum: number }
 /** Simple kriging (known mean) → {est, variance}. Used by SGS/SIS. */
 export function simpleKrige(data: Pt[], target: { x: number; y: number }, p: Vario, mean = 0): KrigeResult {
   const n = data.length; if (!n) return { est: mean, variance: p.sill, wsum: 0 };
-  const C = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, k) => cov(dist(data[i], data[k]), p)));
-  const k = data.map((d) => cov(dist(d, target), p));
+  const C = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, k) => cov(dist(data[i], data[k], p), p)));
+  const k = data.map((d) => cov(dist(d, target, p), p));
   const lam = solve(C, k);
   let est = mean, varr = p.sill, wsum = 0;
   for (let i = 0; i < n; i++) { est += lam[i] * (data[i].v - mean); varr -= lam[i] * k[i]; wsum += lam[i]; }
@@ -71,8 +104,8 @@ export function simpleKrige(data: Pt[], target: { x: number; y: number }, p: Var
 export function ordinaryKrige(data: Pt[], target: { x: number; y: number }, p: Vario): KrigeResult {
   const n = data.length; if (!n) return { est: 0, variance: p.sill, wsum: 0 };
   const A = Array.from({ length: n + 1 }, (_, i) => Array.from({ length: n + 1 }, (_, k) =>
-    i < n && k < n ? cov(dist(data[i], data[k]), p) : (i === n && k === n ? 0 : 1)));
-  const b = [...data.map((d) => cov(dist(d, target), p)), 1];
+    i < n && k < n ? cov(dist(data[i], data[k], p), p) : (i === n && k === n ? 0 : 1)));
+  const b = [...data.map((d) => cov(dist(d, target, p), p)), 1];
   const sol = solve(A, b); const lam = sol.slice(0, n), mu = sol[n];
   let est = 0, wsum = 0, varr = p.sill;
   for (let i = 0; i < n; i++) { est += lam[i] * data[i].v; wsum += lam[i]; varr -= lam[i] * b[i]; }
@@ -117,7 +150,7 @@ export function sgs(cond: Pt[], targets: Array<{ x: number; y: number }>, p: Var
   for (let i = order.length - 1; i > 0; i--) { const jj = Math.floor(rng() * (i + 1)); [order[i], order[jj]] = [order[jj], order[i]]; }
   const out = new Array<number>(targets.length);
   for (const ti of order) {
-    const { est, variance } = simpleKrige(nearest(data, targets[ti], SEARCH_K), targets[ti], p, 0);
+    const { est, variance } = simpleKrige(nearest(data, targets[ti], SEARCH_K, p), targets[ti], p, 0);
     const sim = est + Math.sqrt(variance) * gauss(rng);
     out[ti] = sim; data.push({ x: targets[ti].x, y: targets[ti].y, v: sim });
   }
@@ -136,7 +169,7 @@ export function sis(cond: FaciesPt[], targets: Array<{ x: number; y: number }>, 
   for (let i = order.length - 1; i > 0; i--) { const jj = Math.floor(rng() * (i + 1)); [order[i], order[jj]] = [order[jj], order[i]]; }
   const out = new Array<0 | 1>(targets.length);
   for (const ti of order) {
-    const nb = nearest(data, targets[ti], SEARCH_K);
+    const nb = nearest(data, targets[ti], SEARCH_K, p);
     const prob = nb.length ? Math.min(1, Math.max(0, simpleKrige(nb, targets[ti], p, gp).est)) : gp;
     const f: 0 | 1 = rng() < prob ? 1 : 0;
     out[ti] = f; data.push({ x: targets[ti].x, y: targets[ti].y, v: f });

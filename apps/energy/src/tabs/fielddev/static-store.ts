@@ -14,6 +14,7 @@ import type { BuiltGrid } from './grid-build';
 import type { ZoneModel } from './zone-model';
 import type { UpscaleResultGrid, PermAverage } from './upscale-grid';
 import type { SimResult } from './sim-grid';
+import type { SimSummary } from './case-store';
 import type { Reconciliation } from './volumes';
 
 export type ProcessId =
@@ -80,7 +81,14 @@ export interface DialogWindow {
   z: number;
 }
 
-export type ViewMode = '2d' | '3d' | 'section';
+/**
+ * `split` shows the 3D scene and the 2D section side by side.
+ *
+ * Not a luxury: a cross-section is drawn on a map and read against the structure, and
+ * making the user flip between the two loses the spatial context that made them draw
+ * the line where they did.
+ */
+export type ViewMode = '2d' | '3d' | 'section' | 'split' | 'upscale' | 'report' | 'maps';
 
 interface StaticState {
   /** processes that have produced an artifact */
@@ -114,6 +122,25 @@ interface StaticState {
   upscaled: UpscaleResultGrid | null;
   /** S6 · S7 — the simulated facies / phi / k field */
   sim: SimResult | null;
+  /**
+   * The realisation's summary, WITHOUT its per-layer arrays.
+   *
+   * A case loaded from the store has its properties in the packed grid and no `sim`:
+   * the ~7 MB of layer arrays exist only to write those properties, and re-storing them
+   * to re-derive what is already stored would double the record for nothing. Everything
+   * a reader quotes about a realisation — seed, resolution, sand fraction, cells capped
+   * — lives here instead, and survives the round trip.
+   */
+  simInfo: SimSummary | null;
+  /**
+   * Bumped whenever the packed grid's PROPERTY ARRAYS are rewritten in place.
+   *
+   * `writePackedProps` mutates the typed arrays rather than replacing the grid — they
+   * are the largest structure in the session and re-allocating them per property switch
+   * would defeat the point of packing. React therefore cannot see the change by
+   * identity, so this counter is what every property-derived memo depends on.
+   */
+  propsVersion: number;
   simming: { layer: number; nz: number } | null;
   /** S9 */
   volumes: Reconciliation | null;
@@ -122,11 +149,43 @@ interface StaticState {
   simSeed: number;
   permAverage: PermAverage;
 
+  // ── viewport state ──
+  //
+  // Lifted out of GeaStudio because the 2D pane needs it too. While it was local, the
+  // section map was handed a hardcoded layer 0 and could not follow the K player, and
+  // the two views could disagree about which property they were showing — the exact
+  // failure `prop-view` exists to prevent, reintroduced one level up.
+  propKey: string;
+  sliceOn: boolean;
+  sliceAxis: 'i' | 'j' | 'k';
+  sliceIndex: number;
+  /** the user-drawn cross-section, in world coordinates */
+  sectionPoints: Array<{ x: number; y: number }>;
+  /**
+   * Per-property colour ramp and display range, keyed by property name.
+   *
+   * Per PROPERTY, not global: porosity and permeability are read for different reasons
+   * and a shared scale serves neither. A missing entry means "auto" — the P2-P98 range,
+   * which is what the viewer shows until someone deliberately pins it.
+   */
+  propRamp: Record<string, string>;
+  propRange: Record<string, { lo: number; hi: number }>;
+
+  showShell: boolean;
+  /** cell edges over the shell — what makes a grid read as a grid rather than a lump */
+  showEdges: boolean;
+
   view: ViewMode;
   zScale: number;
   /** which horizons the viewport is drawing */
   visibleHorizons: string[];
   showWells: boolean;
+  /**
+   * Which wells are drawn. `null` means ALL — distinct from `[]`, which means the user
+   * deliberately switched every one off. Collapsing those two makes "hide all" read as
+   * "reset", which is the kind of small lie that erodes trust in a tree.
+   */
+  visibleWells: string[] | null;
   showContact: boolean;
 
   open: (id: ProcessId) => void;
@@ -145,6 +204,8 @@ interface StaticState {
   setReservoirZones: (z: string[] | null) => void;
   setUpscaled: (u: UpscaleResultGrid | null) => void;
   setSim: (s: SimResult | null) => void;
+  setSimInfo: (s: SimSummary | null) => void;
+  bumpProps: () => void;
   setSimming: (s: { layer: number; nz: number } | null) => void;
   setVolumes: (v: Reconciliation | null) => void;
   setSimNodes: (n: number) => void;
@@ -153,11 +214,22 @@ interface StaticState {
   setHorizonOrder: (ids: string[]) => void;
   setNz: (n: number) => void;
   setScheme: (s: StaticState['layerScheme']) => void;
+  setProp: (k: string) => void;
+  setSliceOn: (b: boolean) => void;
+  setSliceAxis: (a: 'i' | 'j' | 'k') => void;
+  setSliceIndex: (n: number) => void;
+  setSectionPoints: (p: Array<{ x: number; y: number }>) => void;
+  setPropRamp: (key: string, ramp: string) => void;
+  setPropRange: (key: string, r: { lo: number; hi: number } | null) => void;
+  setShowShell: (b: boolean) => void;
+  setShowEdges: (b: boolean) => void;
   setView: (v: ViewMode) => void;
   setZScale: (z: number) => void;
   setVisibleHorizons: (ids: string[]) => void;
   toggleHorizon: (id: string) => void;
   setShowWells: (b: boolean) => void;
+  setVisibleWells: (w: string[] | null) => void;
+  toggleWell: (name: string, all: string[]) => void;
   setShowContact: (b: boolean) => void;
 }
 
@@ -181,16 +253,29 @@ export const useStatic = create<StaticState>((set) => ({
   reservoirZones: null,
   upscaled: null,
   sim: null,
+  simInfo: null,
+  propsVersion: 0,
   simming: null,
   volumes: null,
   simNodes: 24,
   simSeed: 1000,
   permAverage: 'geometric',
 
+  propKey: 'phi',
+  sliceOn: false,
+  sliceAxis: 'k',
+  sliceIndex: 0,
+  sectionPoints: [],
+  propRamp: {},
+  propRange: {},
+  showShell: true,
+  showEdges: false,
+
   view: '3d',
   zScale: 8,
   visibleHorizons: [],
   showWells: true,
+  visibleWells: null,
   showContact: true,
 
   open: (id) => set((s) => {
@@ -240,6 +325,8 @@ export const useStatic = create<StaticState>((set) => ({
   setReservoirZones: (reservoirZones) => set({ reservoirZones, sim: null, volumes: null }),
   setUpscaled: (upscaled) => set({ upscaled }),
   setSim: (sim) => set({ sim }),
+  setSimInfo: (simInfo) => set({ simInfo }),
+  bumpProps: () => set((st) => ({ propsVersion: st.propsVersion + 1 })),
   setSimming: (simming) => set({ simming }),
   setVolumes: (volumes) => set({ volumes }),
   // a new simulation grid or seed invalidates the field it produced
@@ -251,6 +338,22 @@ export const useStatic = create<StaticState>((set) => ({
   // grid is worse than none because it still renders
   setNz: (nzPerZone) => set({ nzPerZone, grid: null }),
   setScheme: (layerScheme) => set({ layerScheme, grid: null }),
+  setProp: (propKey) => set({ propKey }),
+  setSliceOn: (sliceOn) => set({ sliceOn }),
+  // a new axis restarts the scrub — index 40 on i means nothing on k
+  setSliceAxis: (sliceAxis) => set({ sliceAxis, sliceIndex: 0 }),
+  setSliceIndex: (sliceIndex) => set({ sliceIndex }),
+  setSectionPoints: (sectionPoints) => set({ sectionPoints }),
+  setPropRamp: (key, ramp) => set((st) => ({ propRamp: { ...st.propRamp, [key]: ramp } })),
+  // null CLEARS the pin and returns the property to auto-scaling — distinct from
+  // pinning it to whatever auto happens to be right now, which would then stop tracking
+  setPropRange: (key, r) => set((st) => {
+    const next = { ...st.propRange };
+    if (r) next[key] = r; else delete next[key];
+    return { propRange: next };
+  }),
+  setShowShell: (showShell) => set({ showShell }),
+  setShowEdges: (showEdges) => set({ showEdges }),
   setView: (view) => set({ view }),
   setZScale: (zScale) => set({ zScale }),
   setVisibleHorizons: (visibleHorizons) => set({ visibleHorizons }),
@@ -260,6 +363,11 @@ export const useStatic = create<StaticState>((set) => ({
       : [...s.visibleHorizons, id],
   })),
   setShowWells: (showWells) => set({ showWells }),
+  setVisibleWells: (visibleWells) => set({ visibleWells }),
+  toggleWell: (name, all) => set((st) => {
+    const cur = st.visibleWells ?? all;
+    return { visibleWells: cur.includes(name) ? cur.filter((w) => w !== name) : [...cur, name] };
+  }),
   setShowContact: (showContact) => set({ showContact }),
 }));
 

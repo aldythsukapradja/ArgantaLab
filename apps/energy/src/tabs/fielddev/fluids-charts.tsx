@@ -5,86 +5,38 @@
 // "display" data path, so a chart cannot show one thing while the exported deck says
 // another — which is the failure mode this whole stage exists to prevent.
 //
-// Plain SVG with hand-built scales, matching the rest of the suite. Deliberately
-// resolution-independent (viewBox + preserveAspectRatio none) so a panel can be any
-// size without a resize observer.
+// All seven share `fluids-chart-kit`: d3 scales, d3-chosen ticks, d3-formatted labels,
+// an axis title that always carries its unit, a crosshair, and a hover readout naming
+// every series with its own unit. They size themselves to their container rather than
+// stretching a fixed viewBox, so a label is the same size on every panel.
+import { useMemo } from 'react';
 import type {
   DynamicInitialization, PressurePoint, PvtModel, ScalEndpoints, ScalRow, WellGradient,
 } from './fluid-model';
 import { coreyKr, fracFlow, swAtHeight } from './fluid-model';
+import {
+  Chart, Legend, useChartSize, nearestProbe, linePath, areaPath,
+  xScale, yScale, yScaleDown, yScaleLog, tickText, M, M2,
+  type SeriesSpec, type Pt,
+} from './fluids-chart-kit';
 
-const W = 640, H = 380;
+const C = {
+  oil: 'var(--teal)',
+  water: 'var(--cblue,#60a5fa)',
+  gas: 'var(--amber,#fbbf24)',
+  aux: 'var(--purple,#a78bfa)',
+  ink: 'var(--ink3)',
+};
 
-interface Pad { l: number; r: number; t: number; b: number }
-const PAD: Pad = { l: 46, r: 44, t: 12, b: 30 };
-
-/** A linear scale over a range that is never zero-width. */
-function scale(min: number, max: number, lo: number, hi: number) {
-  const span = max - min || 1;
-  return (v: number) => lo + ((v - min) / span) * (hi - lo);
-}
-
-function ticks(min: number, max: number, count = 5): number[] {
-  const span = max - min;
-  if (!(span > 0)) return [min];
-  const raw = span / count;
-  const mag = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? mag * 10;
-  const out: number[] = [];
-  for (let v = Math.ceil(min / step) * step; v <= max + step * 1e-9; v += step) out.push(Number(v.toFixed(10)));
-  return out;
-}
-
-const fmt = (v: number, d = 2) => (Math.abs(v) >= 1000 ? v.toFixed(0) : v.toFixed(d));
-
-function Frame({ children, xLabel, yLabel, y2Label }: {
-  children: React.ReactNode; xLabel: string; yLabel: string; y2Label?: string;
-}) {
+/** Wrap a chart so it measures its box first — every plot on the stage does this. */
+function Sized({ children, minHeight = 180 }: { children: (s: { w: number; h: number }) => React.ReactNode; minHeight?: number }) {
+  const [ref, size] = useChartSize<HTMLDivElement>();
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img">
-      <rect x={PAD.l} y={PAD.t} width={W - PAD.l - PAD.r} height={H - PAD.t - PAD.b} fill="none" stroke="var(--line2)" />
-      {children}
-      <text x={(W - PAD.r + PAD.l) / 2} y={H - 6} textAnchor="middle" fontSize={9} fill="var(--ink3)">{xLabel}</text>
-      <text x={12} y={(H - PAD.b + PAD.t) / 2} textAnchor="middle" fontSize={9} fill="var(--ink3)"
-        transform={`rotate(-90 12 ${(H - PAD.b + PAD.t) / 2})`}>{yLabel}</text>
-      {y2Label && (
-        <text x={W - 8} y={(H - PAD.b + PAD.t) / 2} textAnchor="middle" fontSize={9} fill="var(--ink3)"
-          transform={`rotate(90 ${W - 8} ${(H - PAD.b + PAD.t) / 2})`}>{y2Label}</text>
-      )}
-    </svg>
+    <div className="frx-chart" ref={ref} style={{ minHeight }}>
+      {size.w > 40 && size.h > 40 ? children(size) : null}
+    </div>
   );
 }
-
-function XAxis({ values, x, d = 0 }: { values: number[]; x: (v: number) => number; d?: number }) {
-  return (
-    <g>
-      {values.map((v) => (
-        <g key={v}>
-          <line x1={x(v)} x2={x(v)} y1={PAD.t} y2={H - PAD.b} stroke="var(--line2)" strokeDasharray="2 4" opacity={0.55} />
-          <text x={x(v)} y={H - PAD.b + 12} textAnchor="middle" fontSize={8.5} fill="var(--ink3)">{fmt(v, d)}</text>
-        </g>
-      ))}
-    </g>
-  );
-}
-
-function YAxis({ values, y, d = 2, right = false, color = 'var(--ink3)' }: {
-  values: number[]; y: (v: number) => number; d?: number; right?: boolean; color?: string;
-}) {
-  return (
-    <g>
-      {values.map((v) => (
-        <g key={v}>
-          {!right && <line x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} stroke="var(--line2)" strokeDasharray="2 4" opacity={0.55} />}
-          <text x={right ? W - PAD.r + 5 : PAD.l - 5} y={y(v) + 3} textAnchor={right ? 'start' : 'end'} fontSize={8.5} fill={color}>{fmt(v, d)}</text>
-        </g>
-      ))}
-    </g>
-  );
-}
-
-const path = (pts: Array<[number, number]>) =>
-  pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(2)} ${p[1].toFixed(2)}`).join(' ');
 
 // ── PVT: Bo and Rs against pressure ──────────────────────────────────────────
 
@@ -95,74 +47,104 @@ const path = (pts: Array<[number, number]>) =>
  * marked, never smoothed.
  */
 export function PvtChart({ pvt, pb, pi }: { pvt: PvtModel; pb: number; pi: number }) {
-  const rows = [...pvt.pvto, ...pvt.undersaturated.slice(1)];
-  const pMin = 0, pMax = Math.max(...rows.map((r) => r.p));
-  const boMin = Math.min(...rows.map((r) => r.bo)), boMax = Math.max(...rows.map((r) => r.bo));
-  const rsMax = Math.max(...rows.map((r) => r.rs));
-  const x = scale(pMin, pMax, PAD.l, W - PAD.r);
-  const yBo = scale(boMin * 0.98, boMax * 1.02, H - PAD.b, PAD.t);
-  const yRs = scale(0, rsMax * 1.06, H - PAD.b, PAD.t);
+  const rows = useMemo(() => [...pvt.pvto, ...pvt.undersaturated.slice(1)], [pvt]);
+  const series: SeriesSpec[] = [
+    { key: 'bo', label: 'Bo', color: C.oil, unit: 'rm³/Sm³', width: 2 },
+    { key: 'rs', label: 'Rs', color: C.gas, unit: 'Sm³/Sm³', width: 1.8, axis: 'y2' },
+  ];
+  const probe = useMemo(
+    () => nearestProbe(rows, (r) => r.p, [
+      { key: 'bo', yOf: (r) => r.bo },
+      { key: 'rs', yOf: (r) => r.rs },
+    ]),
+    [rows],
+  );
 
   return (
-    <Frame xLabel="pressure (bara)" yLabel="Bo (rm³/Sm³)" y2Label="Rs (Sm³/Sm³)">
-      <XAxis values={ticks(pMin, pMax, 6)} x={x} />
-      <YAxis values={ticks(boMin * 0.98, boMax * 1.02, 5)} y={yBo} d={3} />
-      <YAxis values={ticks(0, rsMax * 1.06, 5)} y={yRs} d={0} right color="var(--amber,#fbbf24)" />
-      {/* bubble point and initial pressure */}
-      {[{ p: pb, c: 'var(--purple,#a78bfa)', t: `Pb ${pb}` }, { p: pi, c: 'var(--teal)', t: `Pi ${pi}` }].map((m) => (
-        <g key={m.t}>
-          <line x1={x(m.p)} x2={x(m.p)} y1={PAD.t} y2={H - PAD.b} stroke={m.c} strokeWidth={1} strokeDasharray="4 3" />
-          <text x={x(m.p) + 4} y={PAD.t + 11} fontSize={8.5} fill={m.c}>{m.t}</text>
-        </g>
-      ))}
-      <path d={path(rows.map((r) => [x(r.p), yRs(r.rs)]))} fill="none" stroke="var(--amber,#fbbf24)" strokeWidth={1.6} />
-      <path d={path(rows.map((r) => [x(r.p), yBo(r.bo)]))} fill="none" stroke="var(--teal)" strokeWidth={1.8} />
-      {/* the anchors themselves — the two points that are not correlation */}
-      <circle cx={x(pb)} cy={yRs(pvt.pvto[pvt.pvto.length - 1].rs)} r={3.4} fill="var(--amber,#fbbf24)" stroke="var(--panel)" strokeWidth={1.2} />
-      <circle cx={x(pi)} cy={yBo(pvt.undersaturated[pvt.undersaturated.length - 1].bo)} r={0} fill="none" />
-      <circle cx={x(pb)} cy={yBo(pvt.bob)} r={3.4} fill="var(--teal)" stroke="var(--panel)" strokeWidth={1.2} />
-    </Frame>
+    <>
+      <Sized>{({ w, h }) => {
+        const pMax = Math.max(...rows.map((r) => r.p));
+        const boMin = Math.min(...rows.map((r) => r.bo)), boMax = Math.max(...rows.map((r) => r.bo));
+        const rsMax = Math.max(...rows.map((r) => r.rs));
+        const x = xScale([0, pMax], w, M2);
+        const y = yScale([boMin - (boMax - boMin) * 0.12, boMax + (boMax - boMin) * 0.08], h, M2);
+        const y2 = yScale([0, rsMax * 1.08], h, M2);
+        const T = M2.top, B = h - M2.bottom;
+        return (
+          <Chart size={{ w, h }} margin={M2} series={series} probe={probe}
+            x={{ label: 'Pressure', unit: 'bara', scale: x, ticks: 7 }}
+            y={{ label: 'Oil FVF, Bo', unit: 'rm³/Sm³', scale: y, ticks: 6, format: (v) => v.toFixed(3) }}
+            y2={{ label: 'Solution GOR, Rs', unit: 'Sm³/Sm³', scale: y2, ticks: 6, color: C.gas, format: (v) => v.toFixed(0) }}>
+            {[{ p: pb, c: C.aux, t: `Pb ${pb}` }, { p: pi, c: C.oil, t: `Pi ${pi}` }].map((mk) => (
+              <g key={mk.t}>
+                <line className="frx-ref" x1={x(mk.p)} x2={x(mk.p)} y1={T} y2={B} stroke={mk.c} />
+                <text className="frx-ref-label" x={x(mk.p) + 5} y={T + 11} fill={mk.c}>{mk.t}</text>
+              </g>
+            ))}
+            <path d={linePath(rows.map<Pt>((r) => ({ x: r.p, y: r.rs })), x, y2)} fill="none" stroke={C.gas} strokeWidth={1.8} />
+            <path d={linePath(rows.map<Pt>((r) => ({ x: r.p, y: r.bo })), x, y)} fill="none" stroke={C.oil} strokeWidth={2} />
+            <circle className="frx-anchor" cx={x(pb)} cy={y2(pvt.pvto[pvt.pvto.length - 1].rs)} r={4} fill={C.gas} />
+            <circle className="frx-anchor" cx={x(pb)} cy={y(pvt.bob)} r={4} fill={C.oil} />
+          </Chart>
+        );
+      }}</Sized>
+      <Legend series={series} extra={<span><i className="dot" style={{ background: C.oil }} />deck anchors — every other point is correlation</span>} />
+    </>
   );
 }
 
 /** Viscosity against pressure, log scale — oil, water and gas differ by an order of
  *  magnitude, and the gas branch is invisible on a linear axis. */
 export function ViscosityChart({ pvt, pb, pi }: { pvt: PvtModel; pb: number; pi: number }) {
-  const oil = [...pvt.pvto, ...pvt.undersaturated.slice(1)].map((r) => ({ p: r.p, v: r.muo }));
-  const water = pvt.pvtw.map((r) => ({ p: r.p, v: r.muw }));
-  const gas = pvt.pvdg.map((r) => ({ p: r.p, v: r.mug }));
-  const all = [...oil, ...water, ...gas].map((d) => d.v).filter((v) => v > 0);
-  const pMax = Math.max(...oil.map((d) => d.p), ...gas.map((d) => d.p));
-  const lo = Math.log10(Math.min(...all) * 0.7), hi = Math.log10(Math.max(...all) * 1.4);
-  const x = scale(0, pMax, PAD.l, W - PAD.r);
-  const y = scale(lo, hi, H - PAD.b, PAD.t);
-  const decades: number[] = [];
-  for (let d = Math.floor(lo); d <= Math.ceil(hi); d++) decades.push(d);
+  const rows = useMemo(() => {
+    const oil = [...pvt.pvto, ...pvt.undersaturated.slice(1)];
+    const byP = new Map<number, { p: number; muo?: number; muw?: number; mug?: number }>();
+    const put = (p: number, k: 'muo' | 'muw' | 'mug', v: number) => {
+      const r = byP.get(p) ?? { p };
+      r[k] = v; byP.set(p, r);
+    };
+    for (const r of oil) put(r.p, 'muo', r.muo);
+    for (const r of pvt.pvtw) put(r.p, 'muw', r.muw);
+    for (const r of pvt.pvdg) put(r.p, 'mug', r.mug);
+    return [...byP.values()].sort((a, b) => a.p - b.p);
+  }, [pvt]);
 
-  const series = [
-    { d: oil, c: 'var(--teal)', w: 1.8 },
-    { d: water, c: 'var(--cblue,#60a5fa)', w: 1.6 },
-    { d: gas, c: 'var(--amber,#fbbf24)', w: 1.4 },
+  const series: SeriesSpec[] = [
+    { key: 'muo', label: 'Oil, μo', color: C.oil, unit: 'cP' },
+    { key: 'muw', label: 'Water, μw', color: C.water, unit: 'cP' },
+    { key: 'mug', label: 'Gas, μg', color: C.gas, unit: 'cP' },
   ];
+  const probe = useMemo(() => nearestProbe(rows, (r) => r.p, [
+    { key: 'muo', yOf: (r) => r.muo ?? null },
+    { key: 'muw', yOf: (r) => r.muw ?? null },
+    { key: 'mug', yOf: (r) => r.mug ?? null },
+  ]), [rows]);
+
   return (
-    <Frame xLabel="pressure (bara)" yLabel="viscosity (cP)">
-      <XAxis values={ticks(0, pMax, 6)} x={x} />
-      <g>
-        {decades.map((d) => (
-          <g key={d}>
-            <line x1={PAD.l} x2={W - PAD.r} y1={y(d)} y2={y(d)} stroke="var(--line2)" strokeDasharray="2 4" opacity={0.55} />
-            <text x={PAD.l - 5} y={y(d) + 3} textAnchor="end" fontSize={8.5} fill="var(--ink3)">{10 ** d < 1 ? (10 ** d).toFixed(Math.max(0, -d)) : String(10 ** d)}</text>
-          </g>
-        ))}
-      </g>
-      {[{ p: pb, c: 'var(--purple,#a78bfa)' }, { p: pi, c: 'var(--teal)' }].map((m) => (
-        <line key={m.p} x1={x(m.p)} x2={x(m.p)} y1={PAD.t} y2={H - PAD.b} stroke={m.c} strokeWidth={1} strokeDasharray="4 3" opacity={0.7} />
-      ))}
-      {series.map((s, i) => (
-        <path key={i} d={path(s.d.map((d) => [x(d.p), y(Math.log10(Math.max(1e-9, d.v)))]))}
-          fill="none" stroke={s.c} strokeWidth={s.w} />
-      ))}
-    </Frame>
+    <>
+      <Sized>{({ w, h }) => {
+        const all = rows.flatMap((r) => [r.muo, r.muw, r.mug]).filter((v): v is number => !!v && v > 0);
+        const pMax = Math.max(...rows.map((r) => r.p));
+        const x = xScale([0, pMax], w);
+        const y = yScaleLog([Math.min(...all) * 0.6, Math.max(...all) * 1.6], h);
+        const T = M.top, B = h - M.bottom;
+        const draw = (k: 'muo' | 'muw' | 'mug') =>
+          linePath(rows.filter((r) => r[k] != null).map<Pt>((r) => ({ x: r.p, y: r[k] as number })), x, y);
+        return (
+          <Chart size={{ w, h }} series={series} probe={probe}
+            x={{ label: 'Pressure', unit: 'bara', scale: x, ticks: 6 }}
+            y={{ label: 'Viscosity', unit: 'cP', scale: y, log: true, ticks: 5, format: tickText }}>
+            {[{ p: pb, c: C.aux }, { p: pi, c: C.oil }].map((mk) => (
+              <line key={mk.p} className="frx-ref" x1={x(mk.p)} x2={x(mk.p)} y1={T} y2={B} stroke={mk.c} />
+            ))}
+            <path d={draw('mug')} fill="none" stroke={C.gas} strokeWidth={1.6} />
+            <path d={draw('muw')} fill="none" stroke={C.water} strokeWidth={1.8} />
+            <path d={draw('muo')} fill="none" stroke={C.oil} strokeWidth={2} />
+          </Chart>
+        );
+      }}</Sized>
+      <Legend series={series} />
+    </>
   );
 }
 
@@ -179,35 +161,53 @@ export function ViscosityChart({ pvt, pb, pi }: { pvt: PvtModel; pb: number; pi:
 export function KrChart({ scal, muw, muo, welge }: {
   scal: ScalEndpoints; muw: number; muo: number; welge: DynamicInitialization['welge'];
 }) {
-  const x = scale(0, 1, PAD.l, W - PAD.r);
-  const y = scale(0, 1, H - PAD.b, PAD.t);
-  const n = 120;
-  const pts: Array<{ sw: number; krw: number; kro: number; fw: number }> = [];
-  for (let i = 0; i <= n; i++) {
-    const sw = scal.swc + (1 - scal.sor - scal.swc) * (i / n);
-    const { krw, kro } = coreyKr(sw, scal);
-    pts.push({ sw, krw, kro, fw: fracFlow(sw, scal, muw, muo) });
-  }
-  const swAvg = welge.swAvgBt;
+  const rows = useMemo(() => {
+    const out: Array<{ sw: number; krw: number; kro: number; fw: number }> = [];
+    for (let i = 0; i <= 160; i++) {
+      const sw = scal.swc + (1 - scal.sor - scal.swc) * (i / 160);
+      const { krw, kro } = coreyKr(sw, scal);
+      out.push({ sw, krw, kro, fw: fracFlow(sw, scal, muw, muo) });
+    }
+    return out;
+  }, [scal, muw, muo]);
+
+  const series: SeriesSpec[] = [
+    { key: 'krw', label: 'krw', color: C.water, unit: 'fraction' },
+    { key: 'kro', label: 'kro', color: C.oil, unit: 'fraction' },
+    { key: 'fw', label: 'fw', color: C.aux, unit: 'fraction' },
+  ];
+  const probe = useMemo(() => nearestProbe(rows, (r) => r.sw, [
+    { key: 'krw', yOf: (r) => r.krw }, { key: 'kro', yOf: (r) => r.kro }, { key: 'fw', yOf: (r) => r.fw },
+  ]), [rows]);
+
   return (
-    <Frame xLabel="water saturation" yLabel="kr  ·  fw">
-      <XAxis values={[0, 0.2, 0.4, 0.6, 0.8, 1]} x={x} d={1} />
-      <YAxis values={[0, 0.2, 0.4, 0.6, 0.8, 1]} y={y} d={1} />
-      {/* immobile bands — where nothing flows */}
-      <rect x={x(0)} y={PAD.t} width={x(scal.swc) - x(0)} height={H - PAD.t - PAD.b} fill="var(--cblue,#60a5fa)" opacity={0.07} />
-      <rect x={x(1 - scal.sor)} y={PAD.t} width={x(1) - x(1 - scal.sor)} height={H - PAD.t - PAD.b} fill="var(--teal)" opacity={0.07} />
-      <text x={x(scal.swc / 2)} y={H - PAD.b - 6} textAnchor="middle" fontSize={8} fill="var(--ink3)">Swc</text>
-      <text x={(x(1 - scal.sor) + x(1)) / 2} y={H - PAD.b - 6} textAnchor="middle" fontSize={8} fill="var(--ink3)">Sor</text>
-      {/* the Welge tangent */}
-      <line x1={x(scal.swc)} y1={y(0)} x2={x(swAvg)} y2={y(1)} stroke="var(--purple,#a78bfa)" strokeWidth={1.1} strokeDasharray="4 3" />
-      <circle cx={x(welge.swf)} cy={y(welge.fwf)} r={3.6} fill="var(--purple,#a78bfa)" stroke="var(--panel)" strokeWidth={1.2} />
-      <text x={x(welge.swf) + 6} y={y(welge.fwf) - 5} fontSize={8.5} fill="var(--purple,#a78bfa)">Swf {welge.swf.toFixed(3)}</text>
-      <circle cx={x(swAvg)} cy={y(1)} r={3} fill="none" stroke="var(--purple,#a78bfa)" strokeWidth={1.3} />
-      <text x={x(swAvg) + 6} y={y(1) + 11} fontSize={8.5} fill="var(--purple,#a78bfa)">S̄w {swAvg.toFixed(3)}</text>
-      <path d={path(pts.map((p) => [x(p.sw), y(p.fw)]))} fill="none" stroke="var(--purple,#a78bfa)" strokeWidth={1.4} opacity={0.85} />
-      <path d={path(pts.map((p) => [x(p.sw), y(p.kro)]))} fill="none" stroke="var(--teal)" strokeWidth={1.9} />
-      <path d={path(pts.map((p) => [x(p.sw), y(p.krw)]))} fill="none" stroke="var(--cblue,#60a5fa)" strokeWidth={1.9} />
-    </Frame>
+    <>
+      <Sized>{({ w, h }) => {
+        const x = xScale([0, 1], w), y = yScale([0, 1], h);
+        const T = M.top, B = h - M.bottom;
+        return (
+          <Chart size={{ w, h }} series={series} probe={probe}
+            x={{ label: 'Water saturation, Sw', unit: 'fraction', scale: x, tickValues: [0, 0.2, 0.4, 0.6, 0.8, 1], format: (v) => v.toFixed(1) }}
+            y={{ label: 'kr  ·  fw', unit: 'fraction', scale: y, tickValues: [0, 0.2, 0.4, 0.6, 0.8, 1], format: (v) => v.toFixed(1) }}>
+            {/* immobile bands — where nothing flows */}
+            <rect className="frx-band w" x={x(0)} y={T} width={x(scal.swc) - x(0)} height={B - T} />
+            <rect className="frx-band o" x={x(1 - scal.sor)} y={T} width={x(1) - x(1 - scal.sor)} height={B - T} />
+            <text className="frx-band-label" x={(x(0) + x(scal.swc)) / 2} y={B - 7} textAnchor="middle">Swc {scal.swc.toFixed(2)}</text>
+            <text className="frx-band-label" x={(x(1 - scal.sor) + x(1)) / 2} y={B - 7} textAnchor="middle">Sor {scal.sor.toFixed(2)}</text>
+            {/* the Welge tangent */}
+            <line className="frx-ref" x1={x(scal.swc)} y1={y(0)} x2={x(welge.swAvgBt)} y2={y(1)} stroke={C.aux} />
+            <path d={linePath(rows.map<Pt>((r) => ({ x: r.sw, y: r.fw })), x, y)} fill="none" stroke={C.aux} strokeWidth={1.6} opacity={0.9} />
+            <path d={linePath(rows.map<Pt>((r) => ({ x: r.sw, y: r.kro })), x, y)} fill="none" stroke={C.oil} strokeWidth={2} />
+            <path d={linePath(rows.map<Pt>((r) => ({ x: r.sw, y: r.krw })), x, y)} fill="none" stroke={C.water} strokeWidth={2} />
+            <circle className="frx-anchor" cx={x(welge.swf)} cy={y(welge.fwf)} r={4} fill={C.aux} />
+            <text className="frx-mark" x={x(welge.swf) + 7} y={y(welge.fwf) - 6} fill={C.aux}>Swf {welge.swf.toFixed(3)}</text>
+            <circle cx={x(welge.swAvgBt)} cy={y(1)} r={3.5} fill="none" stroke={C.aux} strokeWidth={1.4} />
+            <text className="frx-mark" x={x(welge.swAvgBt) + 7} y={y(1) + 12} fill={C.aux}>S̄w {welge.swAvgBt.toFixed(3)}</text>
+          </Chart>
+        );
+      }}</Sized>
+      <Legend series={series} extra={<span style={{ color: C.aux }}><i className="dash" />Welge tangent</span>} />
+    </>
   );
 }
 
@@ -223,36 +223,71 @@ export function KrChart({ scal, muw, muo, welge }: {
 export function TransitionChart({ scal, dRho, phi, kMd, owc, fwl }: {
   scal: ScalEndpoints; dRho: number; phi: number; kMd: number; owc: number | null; fwl: number | null;
 }) {
-  const hMax = 140;
-  const x = scale(0, 1, PAD.l, W - PAD.r);
-  const y = scale(hMax, 0, PAD.t, H - PAD.b); // height above FWL, 0 at the bottom
-  const pts: Array<[number, number]> = [];
-  for (let i = 0; i <= 140; i++) {
-    const h = (hMax * i) / 140;
-    pts.push([x(swAtHeight(h, scal, dRho, phi, kMd)), y(h)]);
-  }
-  // the height at which Sw is within 1% of connate — the top of the transition zone
-  let hTop = hMax;
-  for (let h = 0; h <= hMax; h += 0.5) {
-    if (swAtHeight(h, scal, dRho, phi, kMd) <= scal.swc * 1.01) { hTop = h; break; }
-  }
-  const label = (h: number, text: string, c: string) => (
-    <g>
-      <line x1={PAD.l} x2={W - PAD.r} y1={y(h)} y2={y(h)} stroke={c} strokeWidth={1} strokeDasharray="4 3" />
-      <text x={W - PAD.r - 4} y={y(h) - 4} textAnchor="end" fontSize={8.5} fill={c}>{text}</text>
-    </g>
-  );
+  const hMax = 160;
+  const rows = useMemo(() => {
+    const out: Array<{ h: number; sw: number }> = [];
+    for (let i = 0; i <= 160; i++) {
+      const hh = (hMax * i) / 160;
+      out.push({ h: hh, sw: swAtHeight(hh, scal, dRho, phi, kMd) });
+    }
+    return out;
+  }, [scal, dRho, phi, kMd]);
+
+  const series: SeriesSpec[] = [{ key: 'sw', label: 'Sw', color: C.water, unit: 'fraction' }];
+  const probe = useMemo(() => nearestProbe(rows, (r) => r.h, [{ key: 'sw', yOf: (r) => r.sw }]), [rows]);
+
   return (
-    <Frame xLabel="water saturation" yLabel="height above free-water level (m)">
-      <XAxis values={[0, 0.2, 0.4, 0.6, 0.8, 1]} x={x} d={1} />
-      <YAxis values={ticks(0, hMax, 5)} y={y} d={0} />
-      <path d={`${path(pts)} L${x(1)} ${y(0)} Z`} fill="var(--cblue,#60a5fa)" opacity={0.1} />
-      {label(hTop, `full oil column at +${hTop.toFixed(0)} m`, 'var(--teal)')}
-      {owc != null && fwl != null && label(fwl - owc, `OWC ${owc.toFixed(0)} m TVDSS`, 'var(--amber,#fbbf24)')}
-      <path d={path(pts)} fill="none" stroke="var(--cblue,#60a5fa)" strokeWidth={1.9} />
-      <line x1={x(scal.swc)} x2={x(scal.swc)} y1={PAD.t} y2={H - PAD.b} stroke="var(--ink3)" strokeWidth={1} strokeDasharray="2 3" opacity={0.7} />
-      <text x={x(scal.swc) + 4} y={PAD.t + 11} fontSize={8.5} fill="var(--ink3)">Swc</text>
-    </Frame>
+    <>
+      <Sized>{({ w, h }) => {
+        const x = xScale([0, 1], w);
+        // height grows UPWARD from the contact, so the axis is inverted: 0 at the base
+        const y = yScale([0, hMax], h);
+        const L = M.left, R = w - M.right;
+        return (
+          <Chart size={{ w, h }} series={series} probe={probe} orient="y"
+            x={{ label: 'Water saturation, Sw', unit: 'fraction', scale: x, tickValues: [0, 0.2, 0.4, 0.6, 0.8, 1], format: (v) => v.toFixed(1) }}
+            y={{ label: 'Height above free-water level', unit: 'm', scale: y, ticks: 6, format: (v) => v.toFixed(0) }}>
+            <path d={areaPath(rows.map<Pt>((r) => ({ x: r.sw, y: r.h })), x, y, 0)} className="frx-fill w" />
+            <line className="frx-ref" x1={x(scal.swc)} x2={x(scal.swc)} y1={M.top} y2={h - M.bottom} stroke={C.ink} />
+            <text className="frx-ref-label" x={x(scal.swc) + 5} y={M.top + 11} fill={C.ink}>Swc</text>
+            {owc != null && fwl != null && fwl - owc <= hMax && (
+              <g>
+                <line className="frx-ref" x1={L} x2={R} y1={y(fwl - owc)} y2={y(fwl - owc)} stroke={C.gas} />
+                <text className="frx-ref-label" x={R - 4} y={y(fwl - owc) - 5} textAnchor="end" fill={C.gas}>
+                  OWC {owc.toFixed(0)} m TVDSS
+                </text>
+              </g>
+            )}
+            <path d={linePath(rows.map<Pt>((r) => ({ x: r.sw, y: r.h })), x, y)} fill="none" stroke={C.water} strokeWidth={2} />
+          </Chart>
+        );
+      }}</Sized>
+      <Legend series={series} extra={<span>hover reads Sw at a height</span>} />
+    </>
+  );
+}
+
+/** The SWOF table's Pc column, drawn — so the number the simulator reads and the
+ *  transition zone the geologist sees are visibly the same curve. */
+export function PcChart({ swof, scal }: { swof: ScalRow[]; scal: ScalEndpoints }) {
+  const series: SeriesSpec[] = [{ key: 'pc', label: 'Pc', color: C.gas, unit: 'bar' }];
+  const probe = useMemo(() => nearestProbe(swof, (r) => r.sw, [{ key: 'pc', yOf: (r) => r.pc }]), [swof]);
+  return (
+    <>
+      <Sized minHeight={120}>{({ w, h }) => {
+        const pcMax = Math.max(...swof.map((r) => r.pc)) || 1;
+        const x = xScale([0, 1], w), y = yScale([0, pcMax * 1.05], h);
+        return (
+          <Chart size={{ w, h }} series={series} probe={probe}
+            x={{ label: 'Water saturation, Sw', unit: 'fraction', scale: x, tickValues: [0, 0.25, 0.5, 0.75, 1], format: (v) => v.toFixed(2) }}
+            y={{ label: 'Capillary pressure, Pc', unit: 'bar', scale: y, ticks: 4, format: (v) => v.toFixed(2) }}>
+            <line className="frx-ref" x1={x(scal.swc)} x2={x(scal.swc)} y1={M.top} y2={h - M.bottom} stroke={C.ink} />
+            <path d={linePath(swof.map<Pt>((r) => ({ x: r.sw, y: r.pc })), x, y)} fill="none" stroke={C.gas} strokeWidth={2} />
+          </Chart>
+        );
+      }}</Sized>
+      <Legend series={series} />
+    </>
   );
 }
 
@@ -270,71 +305,90 @@ const WELL_COLORS = ['#22d3ee', '#f59e0b', '#a78bfa', '#4ade80', '#f472b6', '#60
  * that agreement, or its absence, is the honest verdict on the initialization.
  *
  * Stations that never left the mud column are drawn hollow: present, visible, and
- * excluded from every fit.
+ * excluded from every fit. Hovering a station names its well and reads its pressure.
  */
 export function PressureDepthChart({ init, points, wells }: {
   init: DynamicInitialization; points: PressurePoint[]; wells: WellGradient[];
 }) {
   const eq = init.equil;
-  const zs = points.map((p) => p.tvdss);
-  const ps = points.map((p) => p.pressure);
-  const zMin = Math.min(eq.datumTvdss - 200, ...(zs.length ? zs : [eq.datumTvdss]), eq.owc ?? eq.datumTvdss) - 40;
-  const zMax = Math.max(eq.datumTvdss + 200, ...(zs.length ? zs : [eq.datumTvdss]), eq.owc ?? eq.datumTvdss) + 40;
-  const modelP = [
-    eq.datumPressure + eq.oilGradient * (zMin - eq.datumTvdss),
-    eq.datumPressure + eq.waterGradient * (zMax - eq.datumTvdss),
+  const colorOf = useMemo(() => new Map(wells.map((wg, i) => [wg.well, WELL_COLORS[i % WELL_COLORS.length]])), [wells]);
+  const series: SeriesSpec[] = [
+    { key: 'oil', label: 'Modelled oil gradient', color: C.oil, unit: 'bara' },
+    { key: 'water', label: 'Modelled water gradient', color: C.water, unit: 'bara' },
   ];
-  const pMin = Math.min(...(ps.length ? ps : modelP), ...modelP) - 15;
-  const pMax = Math.max(...(ps.length ? ps : modelP), ...modelP) + 15;
-  const x = scale(pMin, pMax, PAD.l, W - PAD.r);
-  const y = scale(zMin, zMax, PAD.t, H - PAD.b);
-
-  const colorOf = new Map(wells.map((w, i) => [w.well, WELL_COLORS[i % WELL_COLORS.length]]));
-  const oilTop = eq.owc ?? zMax;
+  const probe = useMemo(() => (z: number) => [
+    { key: 'oil', value: eq.datumPressure + eq.oilGradient * (z - eq.datumTvdss) },
+    { key: 'water', value: eq.owc == null ? null : (eq.contactPressure ?? eq.datumPressure) + eq.waterGradient * (z - eq.owc) },
+  ], [eq]);
 
   return (
-    <Frame xLabel="pressure (bara)" yLabel="TVDSS (m)">
-      <XAxis values={ticks(pMin, pMax, 6)} x={x} d={0} />
-      <YAxis values={ticks(zMin, zMax, 6)} y={y} d={0} />
-      {/* the modelled legs */}
-      <line x1={x(eq.datumPressure + eq.oilGradient * (zMin - eq.datumTvdss))} y1={y(zMin)}
-        x2={x(eq.datumPressure + eq.oilGradient * (oilTop - eq.datumTvdss))} y2={y(oilTop)}
-        stroke="var(--teal)" strokeWidth={2} />
-      {eq.owc != null && (
-        <line x1={x(eq.contactPressure ?? eq.datumPressure)} y1={y(eq.owc)}
-          x2={x((eq.contactPressure ?? eq.datumPressure) + eq.waterGradient * (zMax - eq.owc))} y2={y(zMax)}
-          stroke="var(--cblue,#60a5fa)" strokeWidth={2} />
-      )}
-      {/* datum and contact */}
-      <g>
-        <line x1={PAD.l} x2={W - PAD.r} y1={y(eq.datumTvdss)} y2={y(eq.datumTvdss)} stroke="var(--ink3)" strokeDasharray="3 3" opacity={0.8} />
-        <text x={PAD.l + 4} y={y(eq.datumTvdss) - 4} fontSize={8.5} fill="var(--ink3)">datum {eq.datumTvdss} m · {eq.datumPressure} bara</text>
-      </g>
-      {eq.owc != null && (
-        <g>
-          <line x1={PAD.l} x2={W - PAD.r} y1={y(eq.owc)} y2={y(eq.owc)} stroke="var(--amber,#fbbf24)" strokeWidth={1.2} strokeDasharray="5 3" />
-          <text x={PAD.l + 4} y={y(eq.owc) + 11} fontSize={8.5} fill="var(--amber,#fbbf24)">OWC {eq.owc} m</text>
-        </g>
-      )}
-      {/* each well's own fitted gradient, where one resolved */}
-      {wells.filter((w) => w.resolved && w.fit).map((w) => {
-        const f = w.fit!;
-        const z0 = Math.min(...w.points.map((p) => p.tvdss)), z1 = Math.max(...w.points.map((p) => p.tvdss));
+    <>
+      <Sized minHeight={240}>{({ w, h }) => {
+        const zs = points.map((p) => p.tvdss);
+        const zMin = Math.min(eq.datumTvdss - 180, ...(zs.length ? zs : [eq.datumTvdss]), eq.owc ?? eq.datumTvdss) - 30;
+        const zMax = Math.max(eq.datumTvdss + 180, ...(zs.length ? zs : [eq.datumTvdss]), eq.owc ?? eq.datumTvdss) + 30;
+        const modelP = [
+          eq.datumPressure + eq.oilGradient * (zMin - eq.datumTvdss),
+          eq.datumPressure + eq.waterGradient * (zMax - eq.datumTvdss),
+        ];
+        const ps = points.map((p) => p.pressure);
+        const pMin = Math.min(...(ps.length ? ps : modelP), ...modelP) - 12;
+        const pMax = Math.max(...(ps.length ? ps : modelP), ...modelP) + 12;
+        const x = xScale([pMin, pMax], w);
+        const y = yScaleDown([zMin, zMax], h);   // depth increases downward
+        const L = M.left, R = w - M.right;
+        const oilTop = eq.owc ?? zMax;
         return (
-          <line key={w.well} x1={x(f.intercept + f.slope * z0)} y1={y(z0)} x2={x(f.intercept + f.slope * z1)} y2={y(z1)}
-            stroke={colorOf.get(w.well)} strokeWidth={1.2} strokeDasharray="5 3" opacity={0.95} />
+          <Chart size={{ w, h }} series={series} probe={probe} orient="y"
+            x={{ label: 'Pressure', unit: 'bara', scale: x, ticks: 6, format: (v) => v.toFixed(0) }}
+            y={{ label: 'True vertical depth subsea', unit: 'm TVDSS', scale: y, ticks: 7, format: (v) => v.toFixed(0) }}>
+            {/* modelled legs */}
+            <line x1={x(eq.datumPressure + eq.oilGradient * (zMin - eq.datumTvdss))} y1={y(zMin)}
+              x2={x(eq.datumPressure + eq.oilGradient * (oilTop - eq.datumTvdss))} y2={y(oilTop)}
+              stroke={C.oil} strokeWidth={2.2} />
+            {eq.owc != null && (
+              <line x1={x(eq.contactPressure ?? eq.datumPressure)} y1={y(eq.owc)}
+                x2={x((eq.contactPressure ?? eq.datumPressure) + eq.waterGradient * (zMax - eq.owc))} y2={y(zMax)}
+                stroke={C.water} strokeWidth={2.2} />
+            )}
+            {/* datum and contact */}
+            <line className="frx-ref" x1={L} x2={R} y1={y(eq.datumTvdss)} y2={y(eq.datumTvdss)} stroke={C.ink} />
+            <text className="frx-ref-label" x={L + 5} y={y(eq.datumTvdss) - 5} fill={C.ink}>
+              datum {eq.datumTvdss} m · {eq.datumPressure} bara
+            </text>
+            {eq.owc != null && (
+              <>
+                <line className="frx-ref" x1={L} x2={R} y1={y(eq.owc)} y2={y(eq.owc)} stroke={C.gas} strokeWidth={1.3} />
+                <text className="frx-ref-label" x={L + 5} y={y(eq.owc) + 12} fill={C.gas}>OWC {eq.owc} m</text>
+              </>
+            )}
+            {/* each well's own fitted gradient, where one resolved */}
+            {wells.filter((g) => g.resolved && g.fit).map((g) => {
+              const f = g.fit!;
+              const z0 = Math.min(...g.points.map((p) => p.tvdss)), z1 = Math.max(...g.points.map((p) => p.tvdss));
+              return (
+                <line key={g.well} className="frx-ref" x1={x(f.intercept + f.slope * z0)} y1={y(z0)}
+                  x2={x(f.intercept + f.slope * z1)} y2={y(z1)} stroke={colorOf.get(g.well)} strokeWidth={1.4} />
+              );
+            })}
+            {/* the measurements */}
+            {points.map((p, i) => (
+              <circle key={i} className="frx-pt" cx={x(p.pressure)} cy={y(p.tvdss)} r={3.4}
+                fill={p.quality === 'column' ? 'none' : (colorOf.get(p.well) ?? C.ink)}
+                stroke={colorOf.get(p.well) ?? C.ink} strokeWidth={1.3}
+                opacity={p.quality === 'column' ? 0.55 : 1}>
+                <title>{`${p.well}\n${p.pressure.toFixed(1)} bara at ${p.tvdss.toFixed(1)} m TVDSS${p.md != null ? `\n${p.md.toFixed(0)} m MD` : ''}${p.quality === 'column' ? '\nmud column — excluded from every fit' : ' — formation buildup'}`}</title>
+              </circle>
+            ))}
+          </Chart>
         );
-      })}
-      {/* the measurements */}
-      {points.map((p, i) => (
-        <circle key={i} cx={x(p.pressure)} cy={y(p.tvdss)} r={3}
-          fill={p.quality === 'column' ? 'none' : (colorOf.get(p.well) ?? 'var(--ink3)')}
-          stroke={colorOf.get(p.well) ?? 'var(--ink3)'} strokeWidth={1.2}
-          opacity={p.quality === 'column' ? 0.55 : 1}>
-          <title>{`${p.well} — ${p.pressure.toFixed(1)} bara at ${p.tvdss.toFixed(1)} m TVDSS${p.quality === 'column' ? ' (mud column — excluded)' : ''}`}</title>
-        </circle>
-      ))}
-    </Frame>
+      }}</Sized>
+      <Legend series={series} extra={<>
+        <span><i className="dot" style={{ background: C.ink }} />measured buildup</span>
+        <span><i className="dot" style={{ background: 'transparent', boxShadow: 'inset 0 0 0 1.3px currentColor' }} />mud column — excluded</span>
+        <span><i className="dash" />per-well fitted gradient</span>
+      </>} />
+    </>
   );
 }
 
@@ -342,50 +396,50 @@ export function PressureDepthChart({ init, points, wells }: {
  *  profile, from the same Pc curve the SWOF table carries. */
 export function InitSwChart({ init }: { init: DynamicInitialization }) {
   const eq = init.equil;
-  if (eq.fwl == null) return null;
   const dRho = init.pvt.rhoWaterRes - init.pvt.rhoOilRes;
-  const zTop = eq.fwl - 160, zBot = eq.fwl + 25;
-  const x = scale(0, 1, PAD.l, W - PAD.r);
-  const y = scale(zTop, zBot, PAD.t, H - PAD.b);
-  const pts: Array<[number, number]> = [];
-  for (let i = 0; i <= 160; i++) {
-    const z = zTop + ((zBot - zTop) * i) / 160;
-    pts.push([x(swAtHeight(eq.fwl - z, init.scal, dRho, init.rock.phi, init.rock.kMd)), y(z)]);
-  }
-  return (
-    <Frame xLabel="initial water saturation" yLabel="TVDSS (m)">
-      <XAxis values={[0, 0.2, 0.4, 0.6, 0.8, 1]} x={x} d={1} />
-      <YAxis values={ticks(zTop, zBot, 6)} y={y} d={0} />
-      <path d={`${path(pts)} L${x(1)} ${y(zBot)} L${x(1)} ${y(zTop)} Z`} fill="var(--cblue,#60a5fa)" opacity={0.1} />
-      <path d={path(pts)} fill="none" stroke="var(--cblue,#60a5fa)" strokeWidth={1.9} />
-      {eq.owc != null && (
-        <g>
-          <line x1={PAD.l} x2={W - PAD.r} y1={y(eq.owc)} y2={y(eq.owc)} stroke="var(--amber,#fbbf24)" strokeWidth={1.2} strokeDasharray="5 3" />
-          <text x={PAD.l + 4} y={y(eq.owc) - 4} fontSize={8.5} fill="var(--amber,#fbbf24)">OWC {eq.owc.toFixed(0)}</text>
-        </g>
-      )}
-      <g>
-        <line x1={PAD.l} x2={W - PAD.r} y1={y(eq.fwl)} y2={y(eq.fwl)} stroke="var(--cblue,#60a5fa)" strokeWidth={1} strokeDasharray="3 3" />
-        <text x={PAD.l + 4} y={y(eq.fwl) + 11} fontSize={8.5} fill="var(--cblue,#60a5fa)">FWL {eq.fwl.toFixed(1)}</text>
-      </g>
-      <line x1={x(init.rock.sw)} x2={x(init.rock.sw)} y1={PAD.t} y2={H - PAD.b} stroke="var(--teal)" strokeWidth={1} strokeDasharray="2 3" />
-      <text x={x(init.rock.sw) + 4} y={PAD.t + 11} fontSize={8.5} fill="var(--teal)">Sw used for in-place {init.rock.sw.toFixed(2)}</text>
-    </Frame>
-  );
-}
+  const rows = useMemo(() => {
+    if (eq.fwl == null) return [];
+    const zTop = eq.fwl - 170, zBot = eq.fwl + 25;
+    const out: Array<{ z: number; sw: number }> = [];
+    for (let i = 0; i <= 170; i++) {
+      const z = zTop + ((zBot - zTop) * i) / 170;
+      out.push({ z, sw: swAtHeight(eq.fwl - z, init.scal, dRho, init.rock.phi, init.rock.kMd) });
+    }
+    return out;
+  }, [eq.fwl, init.scal, init.rock.phi, init.rock.kMd, dRho]);
 
-/** The SWOF table's Pc column, drawn — so the number the simulator reads and the
- *  transition zone the geologist sees are visibly the same curve. */
-export function PcChart({ swof, scal }: { swof: ScalRow[]; scal: ScalEndpoints }) {
-  const pcs = swof.map((r) => r.pc).filter((v) => Number.isFinite(v));
-  const x = scale(0, 1, PAD.l, W - PAD.r);
-  const y = scale(0, Math.max(...pcs) * 1.05 || 1, H - PAD.b, PAD.t);
+  const series: SeriesSpec[] = [{ key: 'sw', label: 'Initial Sw', color: C.water, unit: 'fraction' }];
+  const probe = useMemo(() => nearestProbe(rows, (r) => r.z, [{ key: 'sw', yOf: (r) => r.sw }]), [rows]);
+  if (eq.fwl == null || !rows.length) return null;
+
   return (
-    <Frame xLabel="water saturation" yLabel="capillary pressure (bar)">
-      <XAxis values={[0, 0.2, 0.4, 0.6, 0.8, 1]} x={x} d={1} />
-      <YAxis values={ticks(0, Math.max(...pcs) * 1.05 || 1, 5)} y={y} d={2} />
-      <path d={path(swof.map((r) => [x(r.sw), y(r.pc)]))} fill="none" stroke="var(--amber,#fbbf24)" strokeWidth={1.9} />
-      <line x1={x(scal.swc)} x2={x(scal.swc)} y1={PAD.t} y2={H - PAD.b} stroke="var(--ink3)" strokeDasharray="2 3" opacity={0.7} />
-    </Frame>
+    <>
+      <Sized minHeight={200}>{({ w, h }) => {
+        const x = xScale([0, 1], w);
+        const y = yScaleDown([rows[0].z, rows[rows.length - 1].z], h);
+        const L = M.left, R = w - M.right;
+        return (
+          <Chart size={{ w, h }} series={series} probe={probe} orient="y"
+            x={{ label: 'Initial water saturation, Sw', unit: 'fraction', scale: x, tickValues: [0, 0.2, 0.4, 0.6, 0.8, 1], format: (v) => v.toFixed(1) }}
+            y={{ label: 'True vertical depth subsea', unit: 'm TVDSS', scale: y, ticks: 6, format: (v) => v.toFixed(0) }}>
+            <path d={areaPath(rows.map<Pt>((r) => ({ x: r.sw, y: r.z })), x, y, rows[0].z)} className="frx-fill w" />
+            {eq.owc != null && (
+              <>
+                <line className="frx-ref" x1={L} x2={R} y1={y(eq.owc)} y2={y(eq.owc)} stroke={C.gas} strokeWidth={1.3} />
+                <text className="frx-ref-label" x={L + 5} y={y(eq.owc) - 5} fill={C.gas}>OWC {eq.owc.toFixed(0)}</text>
+              </>
+            )}
+            <line className="frx-ref" x1={L} x2={R} y1={y(eq.fwl!)} y2={y(eq.fwl!)} stroke={C.water} />
+            <text className="frx-ref-label" x={L + 5} y={y(eq.fwl!) + 12} fill={C.water}>FWL {eq.fwl!.toFixed(1)}</text>
+            <line className="frx-ref" x1={x(init.rock.sw)} x2={x(init.rock.sw)} y1={M.top} y2={h - M.bottom} stroke={C.oil} />
+            <text className="frx-ref-label" x={x(init.rock.sw) + 5} y={M.top + 11} fill={C.oil}>
+              Sw {init.rock.sw.toFixed(2)} used for in-place
+            </text>
+            <path d={linePath(rows.map<Pt>((r) => ({ x: r.sw, y: r.z })), x, y)} fill="none" stroke={C.water} strokeWidth={2} />
+          </Chart>
+        );
+      }}</Sized>
+      <Legend series={series} />
+    </>
   );
 }

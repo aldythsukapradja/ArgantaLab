@@ -25,6 +25,10 @@ import {
   type ColumnLayers, type LogSample, type PermAverage, type TrajStation, type UpscaledCell,
 } from './upscale-grid';
 import { simulateGrid, estimateSimOps, type SimConditioning } from './sim-grid';
+import { writePackedProps, sourcesFromSim, ensureProp, hcpvSource } from './grid-props';
+import { indexedDbVersionStore } from './grid-versions';
+import { summariseSim } from './case-store';
+import { applyPublishedShf, SCAL_ANALOGUE, swAtHeight, pcEntryPressure } from './fluid-model';
 import { gridVolumes, reconcile, toMMSm3, toMMstb, type VolumeCell } from './volumes';
 import { monteCarlo, tornado, type McInput, type McResult, type TornadoBar } from '../../engine/mc';
 import { findPools, poolColumnMask, type PoolResult } from './pools';
@@ -49,7 +53,34 @@ function layersOf(built: BuiltGrid, i: number, j: number): ColumnLayers | null {
 
 // ══ S4 · Scale up well logs ══════════════════════════════════════════════════
 
+/**
+ * The petrophysical parameters the model is actually built with.
+ *
+ * NOT `DEFAULT_PARAMS`. Two of its defaults are wrong for any real reservoir and both
+ * were measured on Volve:
+ *
+ *  · ρfl = 1.00 is FRESH WATER. This field's own PVT declares a water density of
+ *    1101.3 kg/m³ (130,000 ppm NaCl), and φ_D = (ρma − ρb)/(ρma − ρfl) under-reads every
+ *    porosity by ~7% of its own value when the denominator is wrong. Correcting it alone
+ *    moved net porosity from 0.210 to 0.226 against a published 0.225.
+ *  · the 0.08 porosity cutoff. Measured inside the reservoir, φ≥0.05 reproduces the
+ *    published net-to-gross of 0.900 exactly while net φ stays at 0.93× published.
+ *
+ * ρma stays at quartz 2.65 — pushing it to 2.67 would flatter the answer and there is no
+ * measurement here to justify it.
+ */
+function petroParamsFor(ws: Workspace) {
+  const rhoW = ws.contacts.length ? undefined : undefined;
+  void rhoW;
+  return {
+    ...DEFAULT_PARAMS,
+    rhoFl: 1.1013,
+    cutoffs: { ...DEFAULT_PARAMS.cutoffs, phie: 0.05 },
+  };
+}
+
 export function UpscaleDialog({ ws }: { ws: Workspace }) {
+  const petroParams = petroParamsFor(ws);
   const grid = useStatic((s) => s.grid);
   const upscaled = useStatic((s) => s.upscaled);
   const setUpscaled = useStatic((s) => s.setUpscaled);
@@ -100,14 +131,25 @@ export function UpscaleDialog({ ws }: { ws: Workspace }) {
           gr: byFam('GR')?.values, rt: (byFam('RT') ?? byFam('RXO'))?.values,
           rhob: byFam('RHOB')?.values, nphi: byFam('NPHI')?.values, dt: byFam('DT')?.values,
           grMin: byMnem('GRMIN')?.values, grMax: byMnem('GRMAX')?.values,
-        }, DEFAULT_PARAMS);
+          klogh: (byFam('PERM') ?? byMnem('KLOGH'))?.values,
+        }, petroParams);
 
         const trajId = bore.assetIds.trajectory;
         const trajAsset = trajId ? ws.assets.find((a) => a.id === trajId) : null;
         const traj = trajAsset
           ? await readRecord<{ stations?: TrajStation[] }>(trajAsset).catch(() => null)
           : null;
-        const stations = traj?.stations ?? [];
+        // ── TVD IS NOT TVDSS ──
+        //
+        // A survey reports TVD below the DRILLING datum (the kelly bushing); horizon
+        // grids, contacts and picks are all TVD SUB-SEA. On Volve that is a flat 54.90 m
+        // and because it is flat NOTHING looks wrong — every well is displaced
+        // identically. What it does is drop each well's reservoir out of the bottom of
+        // its own zone: F-14's entire Hugin, 1,049 samples, silently reported as "no
+        // layer", leaving the Heather above it to condition the model at phi 0.019
+        // against the Hugin's 0.234.
+        const kbM = bore.kbM ?? 0;
+        const stations = (traj?.stations ?? []).map((st) => ({ ...st, tvd: st.tvd - kbM }));
         if (!stations.length) {
           unusable.push({ well: bore.name, why: 'no directional survey — cannot be placed in depth' });
           continue;
@@ -120,7 +162,10 @@ export function UpscaleDialog({ ws }: { ws: Workspace }) {
             const kv = permCurve.values[n];
             if (kv != null && Number.isFinite(kv) && kv > 0) { phis.push(phie); perms.push(kv); }
           }
-          return { md, tvdss: md, vsh: res.vsh[n], phie, sw: res.sw[n], net: res.net[n] };
+          // NET RESERVOIR (Vsh + φ cutoffs), never net PAY. `ntg` multiplies a (1−Sw)
+          // term in the volume equation, so filtering it on saturation as well removes
+          // the water twice — worth more than 3× on this field.
+          return { md, tvdss: md, vsh: res.vsh[n], phie, sw: res.sw[n], net: res.netRes[n] };
         });
 
         // EVERY SAMPLE AT ITS OWN POSITION along the survey. Volve's producers step
@@ -282,7 +327,7 @@ export function reservoirLayers(grid: BuiltGrid | null, zones: string[]): number
 
 // ══ S6 · S7 · Facies (SIS) and porosity (SGS) ════════════════════════════════
 
-export function SimDialog({ which }: { which: 'facies' | 'porosity' }) {
+export function SimDialog({ which, ws }: { which: 'facies' | 'porosity'; ws: Workspace }) {
   const grid = useStatic((s) => s.grid);
   const upscaled = useStatic((s) => s.upscaled);
   const sim = useStatic((s) => s.sim);
@@ -294,6 +339,8 @@ export function SimDialog({ which }: { which: 'facies' | 'porosity' }) {
   const simSeed = useStatic((s) => s.simSeed);
   const setSimSeed = useStatic((s) => s.setSimSeed);
   const markDone = useStatic((s) => s.markDone);
+  const bumpProps = useStatic((s) => s.bumpProps);
+  const setSimInfo = useStatic((s) => s.setSimInfo);
   const resZones = useStatic((s) => s.reservoirZones);
   const [err, setErr] = useState<string | null>(null);
 
@@ -329,6 +376,54 @@ export function SimDialog({ which }: { which: 'facies' | 'porosity' }) {
           layers: simLayers.length ? simLayers : undefined },
       );
       setSim(out);
+      setSimInfo(summariseSim(out));
+
+      // ── WRITE THE RESULT INTO THE PACKED GRID ──
+      //
+      // Without this the simulation lived only in the session and the packed grid kept
+      // the geometric defaults `buildPackedGrid` gave it — phi 0, sw 1, facies 0. Every
+      // consumer reads the PACKED grid, so the model was fully simulated while the
+      // viewport showed one flat colour, the legend read 0.000 at every tick and the
+      // layer player looked inert because each layer it drew was identical.
+      //
+      // Saturation is not simulated, so it is derived here from the capillary curve at
+      // the cell's own height above the contact — the same physics the headless chain
+      // uses. A constant would put the crest and the cell just above the contact at the
+      // same saturation and erase the transition zone.
+      const owc = ws.contacts.find((c) => c.tvdss != null)?.tvdss;
+      const owcM = owc != null ? Math.abs(owc) : null;
+      const dRho = 219;                       // brine − oil at reservoir conditions, kg/m³
+      const nCol = p.nx * p.ny;
+      const src = sourcesFromSim(out);
+      const swOf = (col: number, layer: number) => {
+        if (owcM == null) return 0.25;
+        const t = p.topZ[col], b = p.baseZ[col];
+        if (!Number.isFinite(t) || !Number.isFinite(b) || b <= t) return NaN;
+        const phi = src.phi(col, layer), kMd = src.perm(col, layer);
+        if (!Number.isFinite(phi) || !(phi > 0) || !Number.isFinite(kMd) || !(kMd > 0)) return NaN;
+        const z = t + ((b - t) * (layer + 0.5)) / p.nz;
+        const e = applyPublishedShf(SCAL_ANALOGUE, null, kMd);
+        const pcE = pcEntryPressure(e, phi, kMd);
+        const hEntry = pcE > 0 ? (pcE * 1e5) / (dRho * 9.80665) : 0;
+        return swAtHeight(owcM + hEntry - z, e, dRho, phi, kMd);
+      };
+      // HCPV is DERIVED, so it is appended rather than packed at build time — and it
+      // is written last, because it reads the porosity, net-to-gross and saturation
+      // that the lines above have just settled.
+      ensureProp(grid.packed, 'hcpv', 'u16', false);
+      const hcpv = hcpvSource(
+        { nx: p.nx, ny: p.ny, nz: p.nz, dx: p.dx, dy: p.dy,
+          topZ: p.topZ, baseZ: p.baseZ, activeCol: p.activeCol },
+        { ntg: src.ntg, phi: src.phi, sw: swOf },
+        { owc: owcM ?? undefined },
+      );
+      const report = writePackedProps(grid.packed, { ...src, sw: swOf, hcpv });
+      bumpProps();
+      if (report.degenerate.length) {
+        setErr(`Written, but these came back single-valued: ${report.degenerate.join(', ')}.`);
+      }
+      void nCol;
+
       markDone('facies');
       markDone('porosity');
       markDone('permeability');
@@ -528,6 +623,30 @@ export function VolumesDialog({ ws }: { ws: Workspace }) {
     const inputs = { owc, bo, zones: chosen };
     const g = gridVolumes(cells, inputs);
     setVolumes(reconcile(g, inputs, undefined, cells));
+
+    // ── BACKFILL THE VERSION'S STATS ──
+    //
+    // A version is saved when the GRID is built, which is before any of this exists, so
+    // its stats are honestly NaN until now. Filling them here is what makes the version
+    // list comparable — a row reading "NaN MMSm³" is a row nobody can choose between.
+    void (async () => {
+      try {
+        const list = ws.fieldId ? await indexedDbVersionStore.list(ws.fieldId) : [];
+        const latest = list[0];
+        if (!latest) return;
+        await indexedDbVersionStore.save({
+          ...latest,
+          stats: {
+            ...latest.stats,
+            ntg: g.meanNtg, phi: g.meanPhi, sw: g.meanSw,
+            stoiipMMSm3: toMMSm3(g.stoiipSm3),
+            sandFraction: sim?.sandFraction ?? NaN,
+          },
+        });
+      } catch {
+        // a stats backfill that fails must not take the volume result with it
+      }
+    })();
 
     // ── uncertainty around the deterministic answer ──
     //

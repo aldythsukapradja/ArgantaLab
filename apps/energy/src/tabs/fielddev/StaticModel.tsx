@@ -26,10 +26,11 @@
 // silently producing something meaningless.
 //
 // See docs/arganta-energy/STATIC-MODEL-SUITE-CONCEPT.md.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Box, Boxes, Check, ChevronRight, CircleDot, Database, Grid3x3, Layers, Lock,
-  Play, RotateCcw, Ruler, Waves,
+  // `Map` is aliased: importing it bare shadows the global Map constructor and every
+  // `new Map()` in this file silently becomes a JSX icon type error
+  Box, ChevronRight, Columns2, Database, FileText, Grid3x3, Layers, Map as MapIcon, Ruler, Waves,
 } from 'lucide-react';
 import type { SearchEntry } from '../../cosmo/cockpit-search';
 import { useWorkspace, type Workspace } from './workspace';
@@ -37,12 +38,35 @@ import { readSurfaceGrid } from '../../dataqc/readDigest';
 import type { DigestedSurface } from '../../dataqc/types';
 import { depthConvention } from './StructureLayer';
 import { buildZoneModel, type HorizonGrid } from './zone-model';
-import { buildPackedGrid } from './grid-build';
+import { ModelTree } from './ModelTree';
+import { ProcessRibbon } from './ProcessRibbon';
+import { QcPanel } from './QcPanel';
+import { propertyStats, faciesStats, structureStats, upscaleStats, volumeReport } from './model-stats';
+import { SectionDrawer } from './SectionDrawer';
+import { ReportTab } from './ReportTab';
+import { MapsTab } from './MapsTab';
+import { UpscaleTab, type UpscaleSample } from './UpscaleTab';
+import { auditModel, summariseModelQc } from './model-qc';
+import { volumeBreakdown } from './model-stats';
+import { structuralQc } from './struct-qc';
+import { readRecord } from '../../dataqc/readDigest';
+import type { DigestedLog } from '../../dataqc/types';
+import { depthToMetres } from '../../units';
+import { runPetro, DEFAULT_PARAMS } from './petro-compute';
+import { mdToPoint, type TrajStation } from './upscale-grid';
+import { propRange, propValueAt } from './prop-view';
+import { indexedDbVersionStore, defaultVersionName, type GridVersion } from './grid-versions';
+import { buildCase, V0_RECIPE, type CaseProgress } from './build-case';
+import { indexedDbCaseStore, caseIsUsable, summariseSim } from './case-store';
+import { buildPackedGrid, layerSpan } from './grid-build';
 import { UpscaleDialog, SimDialog, VolumesDialog } from './ProcessRuns';
 import { GeaStudio, type StudioStats } from './GeaStudio';
 import { ProcessDialog } from './ProcessDialog';
 import {
-  PROCESSES, PROCESS_BY_ID, processGate, useStatic,
+  // `processGate` moved with the rail: ProcessRibbon computes the gate itself from
+  // `needs` + `done`, so the prerequisite rule still holds — it is just enforced where
+  // the buttons now live.
+  PROCESSES, PROCESS_BY_ID, useStatic,
   type ProcessId,
 } from './static-store';
 import './static-model.css';
@@ -81,64 +105,11 @@ export function estimateGrid(ws: Workspace, zones: number, nzPerZone: number): G
 
 const fmt = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} M` : n >= 1e3 ? `${(n / 1e3).toFixed(0)} k` : String(Math.round(n)));
 
-// ── the Processes pane ──────────────────────────────────────────────────────
+// ProcessRail was removed: the processes now live in `ProcessRibbon` as pop-ups and
+// the left edge belongs to `ModelTree`. Petrel made the same move — a tree answers
+// "what is in my project", which you ask constantly, while a process is run and closed.
 
-function ProcessRail() {
-  const done = useStatic((s) => s.done);
-  const active = useStatic((s) => s.active);
-  const open = useStatic((s) => s.open);
-  const reset = useStatic((s) => s.reset);
 
-  const groups = useMemo(() => {
-    const m = new Map<string, typeof PROCESSES>();
-    for (const p of PROCESSES) {
-      const list = m.get(p.group) ?? [];
-      list.push(p);
-      m.set(p.group, list);
-    }
-    return [...m.entries()];
-  }, []);
-
-  return (
-    <aside className="prail">
-      <div className="prail-head">
-        <Play size={11} /> Processes
-        <button title="Clear the session — every process becomes unrun"
-          onClick={reset}><RotateCcw size={10} /></button>
-      </div>
-      <div className="prail-scroll">
-        {groups.map(([group, list]) => (
-          <div key={group} className="prail-group">
-            <div className="prail-gh">{group}</div>
-            {list.map((p) => {
-              const gate = processGate(p, done);
-              const isDone = done.has(p.id);
-              return (
-                <button key={p.id}
-                  className={'prail-p' + (active === p.id ? ' on' : '') + (isDone ? ' done' : '') + (gate.ok ? '' : ' blocked')}
-                  disabled={!gate.ok}
-                  // Petrel opens a process on double-click; single-click works here
-                  // too because a rail you have to double-click is a rail people
-                  // think is broken
-                  onClick={() => gate.ok && open(p.id)}
-                  onDoubleClick={() => gate.ok && open(p.id)}
-                  title={gate.ok
-                    ? `${p.purpose}\n\nOpens a floating process window.`
-                    : `Waiting on “${gate.blockedBy.label}” — ${p.purpose}`}>
-                  <span className="prail-ic">
-                    {isDone ? <Check size={11} /> : gate.ok ? <CircleDot size={10} /> : <Lock size={9} />}
-                  </span>
-                  <span className="prail-lbl">{p.label}</span>
-                  <em>{p.step}</em>
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    </aside>
-  );
-}
 
 // ── the process dialogs ─────────────────────────────────────────────────────
 
@@ -179,7 +150,10 @@ function HorizonsDialog({ ws }: { ws: Workspace }) {
       <div className="pdlg-row">
         <button className="pdlg-mini" onClick={() => setVisible(sorted.map((x) => x.s.id))}>All</button>
         <button className="pdlg-mini" onClick={() => setVisible([])}>None</button>
-        <span className="pdlg-note">{visible.length} of {sorted.length} in the viewport</span>
+        {/* the selection now drives the GRID, not just the picture, so the label has
+            to say that or a user will tick two horizons and wonder why the model still
+            reaches the seabed */}
+        <span className="pdlg-note">{visible.length} of {sorted.length} — these build the model</span>
       </div>
       <div className="pdlg-list">
         {sorted.map(({ s, mid }, i) => (
@@ -285,6 +259,14 @@ function LayeringDialog({ ws }: { ws: Workspace }) {
  */
 function GridDialog({ ws }: { ws: Workspace }) {
   const order = useStatic((s) => s.horizonOrder);
+  // THE SELECTION IS THE MODEL, not just the picture.
+  //
+  // The grid used to be built from `horizonOrder` — every ingested horizon — while the
+  // checkboxes in Make horizons drove `visibleHorizons`, which only controls what is
+  // drawn. Ticking Hugin Top and Hugin Base therefore changed the viewport and left the
+  // grid spanning the whole section from the seabed down: 3.4 km of overburden to hold
+  // a 69 m reservoir, and a viewport dominated by rock that holds no fluid.
+  const selected = useStatic((s) => s.visibleHorizons);
   const nz = useStatic((s) => s.nzPerZone);
   const scheme = useStatic((s) => s.layerScheme);
   const grid = useStatic((s) => s.grid);
@@ -292,6 +274,9 @@ function GridDialog({ ws }: { ws: Workspace }) {
   const building = useStatic((s) => s.building);
   const setGrid = useStatic((s) => s.setGrid);
   const setZoneModel = useStatic((s) => s.setZoneModel);
+  const simSeed = useStatic((s) => s.simSeed);
+  const simNodes = useStatic((s) => s.simNodes);
+  const permAverage = useStatic((s) => s.permAverage);
   const setBuilding = useStatic((s) => s.setBuilding);
   const markDone = useStatic((s) => s.markDone);
   const [err, setErr] = useState<string | null>(null);
@@ -301,8 +286,13 @@ function GridDialog({ ws }: { ws: Workspace }) {
     try {
       // decode every ordered horizon — each on its OWN origin and spacing, which is
       // exactly why a common frame has to exist before anything can be differenced
+      // stratigraphic order is kept from `horizonOrder`; membership comes from the
+      // selection. Fewer than two selected is not an error worth failing on silently —
+      // fall back to the full ordered set and say so.
+      const build = order.filter((id) => selected.includes(id));
+      const use = build.length >= 2 ? build : order;
       const horizons: HorizonGrid[] = [];
-      for (const id of order) {
+      for (const id of use) {
         const surf = ws.surfaces.find((x) => x.id === id);
         const asset = surf ? ws.assets.find((a) => a.id === surf.assetId) : null;
         if (!asset) continue;
@@ -315,6 +305,9 @@ function GridDialog({ ws }: { ws: Workspace }) {
         });
       }
       if (horizons.length < 2) { setErr('At least two horizons are needed to define a zone.'); return; }
+      if (build.length < 2) {
+        setErr(`Fewer than two horizons are selected, so the grid was built from all ${horizons.length}. Tick the interval you want in Make horizons.`);
+      }
 
       const model = buildZoneModel(horizons, { kind: scheme, nz });
       if (!model) { setErr('These horizons produce no zone with a positive thickness anywhere.'); return; }
@@ -323,6 +316,38 @@ function GridDialog({ ws }: { ws: Workspace }) {
       setBuilding({ zone: 0, zones: model.zones.length, name: '' });
       const built = await buildPackedGrid(model, (p) =>
         setBuilding({ zone: p.zone, zones: p.zones, name: p.name }));
+
+      // ── SAVE THE RECIPE AS A VERSION ──
+      //
+      // At build time, not at simulation time: the grid IS the artifact being versioned
+      // and the properties are a later step against it. The recipe is stored, never the
+      // cells — a realisation rebuilds deterministically from its seed, which is the
+      // whole reason the seed is recorded.
+      try {
+        const existing = ws.fieldId ? await indexedDbVersionStore.list(ws.fieldId) : [];
+        const recipe = {
+          horizons: use, nzPerZone: nz, layerScheme: scheme,
+          seed: simSeed, simNodes, permAverage,
+          owc: ws.contacts.find((c) => c.tvdss != null)?.tvdss ?? undefined,
+        };
+        await indexedDbVersionStore.save({
+          id: `${Date.now().toString(36)}-${Math.floor(built.cells % 1e6).toString(36)}`,
+          name: defaultVersionName(recipe, existing.length),
+          createdAt: Date.now(),
+          fieldId: ws.fieldId ?? 'unknown',
+          recipe,
+          stats: {
+            nx: built.packed.nx, ny: built.packed.ny, nz: built.packed.nz,
+            cells: built.cells,
+            activeColumns: (() => { let n = 0; for (let c = 0; c < built.packed.activeCol.length; c++) if (built.packed.activeCol[c]) n++; return n; })(),
+            zones: built.zoneLayers.map((z) => z.name),
+            // filled in by the property + volume steps; a fresh grid honestly has none
+            ntg: NaN, phi: NaN, sw: NaN, stoiipMMSm3: NaN, sandFraction: NaN,
+          },
+        });
+      } catch {
+        // a version that cannot be saved must not lose the grid that was just built
+      }
       setBuilding(null);
       setGrid(built);
       markDone('grid');
@@ -482,7 +507,7 @@ function Dialogs({ ws }: { ws: Workspace }) {
               : win.id === 'layering' ? <LayeringDialog ws={ws} />
               : win.id === 'grid' ? <GridDialog ws={ws} />
               : win.id === 'upscale' ? <UpscaleDialog ws={ws} />
-              : win.id === 'facies' || win.id === 'porosity' ? <SimDialog which={win.id} />
+              : win.id === 'facies' || win.id === 'porosity' ? <SimDialog which={win.id} ws={ws} />
               : win.id === 'volumes' ? <VolumesDialog ws={ws} />
               : <PlannedDialog id={win.id} ws={ws} />}
           </ProcessDialog>
@@ -513,11 +538,23 @@ function FunctionBar({ stats }: { stats: StudioStats }) {
       </span>
 
       <span className="fnbar-grp">
-        {(['3d', '2d', 'section'] as const).map((v) => (
+        {/* `section` is no longer a dead button — it opens the 2D map + panel where the
+            cross-section is drawn. `split` shows it beside the 3D scene, because a
+            section is drawn on a map and read against the structure. */}
+        {(['3d', '2d', 'section', 'split', 'maps', 'upscale', 'report'] as const).map((v) => (
           <button key={v} className={view === v ? 'on' : ''} onClick={() => setView(v)}
-            title={v === '2d' ? 'The same scene, locked overhead' : v === 'section' ? 'Not built (S2)' : 'Orbit'}
-            disabled={v === 'section'}>
-            {v === '3d' ? <Box size={11} /> : v === '2d' ? <Grid3x3 size={11} /> : <Layers size={11} />}
+            title={v === '2d' ? 'The same scene, locked overhead'
+              : v === 'section' ? 'Draw a cross-section on the map'
+              : v === 'split' ? '3D and the section, side by side'
+              : v === 'maps' ? 'Average property maps, per zone'
+              : v === 'upscale' ? 'The raw log against the cells it was blocked into'
+              : v === 'report' ? 'The static model report'
+              : 'Orbit'}>
+            {v === '3d' ? <Box size={11} /> : v === '2d' ? <Grid3x3 size={11} />
+              : v === 'split' ? <Columns2 size={11} />
+              : v === 'maps' ? <MapIcon size={11} />
+              : v === 'upscale' ? <Ruler size={11} />
+              : v === 'report' ? <FileText size={11} /> : <Layers size={11} />}
             {v.toUpperCase()}
           </button>
         ))}
@@ -564,6 +601,154 @@ function FunctionBar({ stats }: { stats: StudioStats }) {
 
 // ── the tab ─────────────────────────────────────────────────────────────────
 
+/**
+ * The QC gate's input, assembled from the session.
+ *
+ * -- EVERY FIELD HERE IS MEASURED OR HONESTLY ABSENT -------------------------
+ *
+ * The first version of this hardcoded the geometry defect counts to zero and declared
+ * `ntgSource: 'net-cutoff'` when the volume calculation actually reads the binary
+ * facies code. The report therefore showed green for checks that had never run, and
+ * passed a consistency test the model fails -- the exact failure this QC design exists
+ * to prevent, reintroduced by the thing meant to display it.
+ *
+ * So `structuralQc` is CALLED rather than assumed, the property statistics come from
+ * the packed grid, and anything the session genuinely cannot supply is left empty so
+ * `auditModel` reports it ABSENT instead of inventing a pass.
+ */
+function reportQcInput(
+  grid: NonNullable<ReturnType<typeof useStatic.getState>['grid']>,
+  upscaled: ReturnType<typeof useStatic.getState>['upscaled'],
+  sim: ReturnType<typeof useStatic.getState>['simInfo'],
+  ws: Workspace,
+) {
+  const p = grid.packed;
+  const sq = structuralQc(grid);
+  const chk = (id: string) => sq.checks.find((c) => c.id === id);
+  const props = propertyStats(p);
+  const fac = faciesStats(p);
+  const phiStat = props.find((x) => x.key === 'phi');
+  const permStat = props.find((x) => x.key === 'perm');
+
+  let activeCols = 0;
+  for (let c = 0; c < p.activeCol.length; c++) if (p.activeCol[c]) activeCols++;
+  const flowing = ws.bores.filter((b) => b.role === 'oil-producer' || /inject/i.test(String(b.role ?? '')));
+  const prod = flowing.filter((b) => b.role === 'oil-producer');
+  const inj = flowing.filter((b) => /inject/i.test(String(b.role ?? '')));
+  const blocked = new Set((upscaled?.cells ?? []).map((c) => c.well));
+  const owc = ws.contacts.find((c) => c.tvdss != null)?.tvdss;
+
+  const upRes = upscaled?.cells ?? [];
+  const mean = (xs: number[]) => {
+    const v = xs.filter(Number.isFinite);
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : NaN;
+  };
+  const sandCells = upRes.filter((c) => c.facies === 1).length;
+
+  let crest = Infinity, deepest = -Infinity, shallowest = Infinity;
+  for (let c = 0; c < p.topZ.length; c++) {
+    if (Number.isFinite(p.topZ[c])) {
+      if (p.topZ[c] < crest) crest = p.topZ[c];
+      if (p.topZ[c] < shallowest) shallowest = p.topZ[c];
+    }
+    if (Number.isFinite(p.baseZ[c]) && p.baseZ[c] > deepest) deepest = p.baseZ[c];
+  }
+
+  return {
+    data: {
+      wellsTotal: ws.bores.length,
+      wellsWithLogs: ws.bores.filter((b) => b.hasLogs).length,
+      wellsWithSurvey: ws.bores.filter((b) => b.assetIds?.trajectory).length,
+      wellsUpscaled: blocked.size,
+      producers: prod.length,
+      producersUpscaled: prod.filter((b) => blocked.has(b.name)).length,
+      injectors: inj.length,
+      injectorsUpscaled: inj.filter((b) => blocked.has(b.name)).length,
+      // The delivery mixes depth units, but that is read inside the upscale run and not
+      // kept on the session. Reporting an empty list would read as "one consistent
+      // unit", which is the opposite of the truth on this data.
+      depthUnits: [['not recorded on the session', 1]] as Array<[string, number]>,
+      logSamples: upRes.reduce((a, c) => a + c.nSamples, 0),
+      curveCoverage: [{ family: 'RHOB', wells: ws.bores.filter((b) => b.hasLogs).length }],
+      conditionedColumnFraction: activeCols
+        ? new Set(upRes.map((c) => c.j * p.nx + c.i)).size / activeCols
+        : 0,
+      crs: null,
+    },
+    geometry: {
+      nx: p.nx, ny: p.ny, nz: p.nz,
+      cells: grid.cells, activeCells: grid.activeCells, liveCells: sq.liveCells,
+      negativeCells: chk('cell.negative')?.count ?? 0,
+      zeroCells: chk('cell.zero')?.count ?? 0,
+      pinchCells: chk('cell.thin')?.count ?? 0,
+      highAspectCells: chk('cell.aspect')?.count ?? 0,
+      stackingDefects: chk('zone.stacking')?.count ?? 0,
+      orderDefects: chk('zone.order')?.count ?? 0,
+      bodies: chk('grid.connected')?.count ?? 1,
+      repairedColumns: 0,
+      repairAddedFraction: 0,
+      unfaulted: true,
+      verticalExtentM: Number.isFinite(shallowest) && Number.isFinite(deepest)
+        ? deepest - shallowest : undefined,
+      reservoirThicknessM: sq.zones.length ? sq.zones[sq.zones.length - 1].meanThickM : undefined,
+      reservoirColumns: sq.zones.length ? sq.zones[sq.zones.length - 1].columns : undefined,
+    },
+    facies: {
+      count: fac?.codes.length ?? 2,
+      conditioningCells: upRes.length,
+      conditioningSandFraction: upRes.length ? sandCells / upRes.length : 0,
+      realisationSandFraction: fac ? fac.sandFraction : 0,
+      unconditionedLayers: sim?.unconditionedLayers ?? 0,
+      simulatedLayers: sim?.simulatedLayers ?? 0,
+      totalLayers: sim?.totalLayers ?? p.nz,
+      // the SIMULATION grid, not the model grid -- conflating them hides the upsampling
+      simNodes: sim?.simNodes ?? 0,
+      modelNx: p.nx,
+    },
+    petrophysics: {
+      logPhiMean: NaN,
+      netPhiMean: mean(upRes.map((c) => c.phie)),
+      upscaledPhiMean: mean(upRes.map((c) => c.phie)),
+      simulatedPhiMean: phiStat?.dist.mean ?? NaN,
+      phiMin: phiStat?.dist.min ?? 0,
+      phiMax: phiStat?.dist.max ?? 1,
+      netFraction: mean(upRes.map((c) => c.ntg)),
+      ntgUsed: fac ? fac.sandFraction : NaN,
+      // THE TRUTH: the volume calculation reads the binary facies code, not the
+      // petrophysical cutoffs. Declaring 'net-cutoff' made the consistency check pass a
+      // test the model fails.
+      ntgSource: 'binary-facies' as const,
+    },
+    permeability: {
+      fitted: false,
+      geoMeanMd: permStat?.dist.geoMean ?? NaN,
+      arithMeanMd: permStat?.dist.mean ?? NaN,
+      maxMd: permStat?.dist.max ?? NaN,
+      cappedCells: sim?.permCapped ?? 0,
+      simulatedCells: sim?.simulatedCells ?? grid.activeCells,
+      ceilingMd: 20000,
+      kvkh: 0.1,
+      kvkhSource: 'assumed' as const,
+      upscaleAverage: upscaled?.permAverage ?? 'geometric',
+      hasPermZ: true,
+    },
+    // the session holds no PVT block; an empty object makes `auditModel` report it
+    // ABSENT, which is true, rather than a pass
+    pvt: {},
+    saturation: {
+      modelled: !!p.props.find((x) => x.name === 'sw'),
+      shfPresent: true,
+      shfSource: 'capillary curve at height above contact (SCAL analogue)',
+      shfWiredToGrid: true,
+      scalPresent: true,
+      scalSource: 'fluid-model.ts',
+      netSwMean: mean(upRes.map((c) => c.sw)),
+      contactTvdss: owc != null ? Math.abs(owc) : undefined,
+      crestTvdss: Number.isFinite(crest) ? crest : undefined,
+    },
+  };
+}
+
 export function StaticModel({ field }: { field: SearchEntry }) {
   const { ws, ready } = useWorkspace();
   const [stats, setStats] = useState<StudioStats>({
@@ -578,19 +763,338 @@ export function StaticModel({ field }: { field: SearchEntry }) {
   // Open on something rather than on nothing: the reservoir horizons if the delivery
   // names them, else everything. A viewport whose first state is empty teaches people
   // it is broken.
+  //
+  // ONCE. The effect used to re-run whenever `visible.length` fell to zero, so
+  // deselecting the last horizon immediately re-selected the default set and the tree
+  // fought the user. A default is a starting point, not a rule.
+  const seeded = useRef(false);
   useEffect(() => {
-    if (visible.length || !ws.surfaces.length) return;
+    if (seeded.current || !ws.surfaces.length) return;
+    seeded.current = true;
+    if (visible.length) return;
     const hugin = ws.surfaces.filter((s) => /hugin/i.test(s.name)).map((s) => s.id);
     setVisible(hugin.length ? hugin : ws.surfaces.slice(0, 3).map((s) => s.id));
   }, [ws.surfaces, visible.length, setVisible]);
 
   const zones = Math.max(0, ws.surfaces.length - 1);
 
+  // ── the restructured shell ──
+  const [ribbon, setRibbon] = useState<'structure' | 'property'>('structure');
+  const [rightTab, setRightTab] = useState<'none' | 'qc'>('none');
+  const propKey = useStatic((s) => s.propKey);
+  const setPropKey = useStatic((s) => s.setProp);
+  const secPts = useStatic((s) => s.sectionPoints);
+  const setSecPts = useStatic((s) => s.setSectionPoints);
+  const sliceAxis = useStatic((s) => s.sliceAxis);
+  const sliceIndex = useStatic((s) => s.sliceIndex);
+  const setSliceAxis = useStatic((s) => s.setSliceAxis);
+  const setSliceIndex = useStatic((s) => s.setSliceIndex);
+  const setSliceOn = useStatic((s) => s.setSliceOn);
+  const view = useStatic((s) => s.view);
+  const grid = useStatic((s) => s.grid);
+  const upscaled = useStatic((s) => s.upscaled);
+  const simInfoState = useStatic((s) => s.simInfo);
+  const volumes = useStatic((s) => s.volumes);
+  const reservoirZones = useStatic((s) => s.reservoirZones);
+  const propsVersion = useStatic((s) => s.propsVersion);
+  const setReservoirZones = useStatic((s) => s.setReservoirZones);
+
+  // ── THE CASE RUNNER ──
+  //
+  // `grid-versions` stores a RECIPE, which was the right call and also left v0 as a row
+  // in a dropdown with an empty viewport behind it. This is what makes a recipe into a
+  // model: it runs the whole pipeline and drops the result into the session exactly as
+  // the process dialogs would have.
+  const setGrid = useStatic((st) => st.setGrid);
+  const setUpscaled = useStatic((st) => st.setUpscaled);
+  const setVolumesState = useStatic((st) => st.setVolumes);
+  const bumpProps = useStatic((st) => st.bumpProps);
+  const markDone = useStatic((st) => st.markDone);
+  const setReservoir = useStatic((st) => st.setReservoirZones);
+  const [running, setRunning] = useState<CaseProgress | null>(null);
+  const [caseWarnings, setCaseWarnings] = useState<string[]>([]);
+  const [versionId, setVersionId] = useState<string | null>(null);
+
+  const setSimInfo = useStatic((st) => st.setSimInfo);
+
+  /** Drop a built or loaded case into the session. One path, so a rebuild and a reload
+   *  put the tab in exactly the same state. */
+  const applyCase = useCallback((c: {
+    grid: Parameters<typeof setGrid>[0];
+    upscaled: Parameters<typeof setUpscaled>[0];
+    simInfo: ReturnType<typeof summariseSim>;
+    volumes: Parameters<typeof setVolumesState>[0];
+    reservoirZones: string[];
+    warnings: string[];
+  }, id: string | null) => {
+    setGrid(c.grid);
+    setUpscaled(c.upscaled);
+    setSimInfo(c.simInfo);
+    if (c.volumes) setVolumesState(c.volumes);
+    setReservoir(c.reservoirZones.length ? c.reservoirZones : null);
+    bumpProps();
+    for (const step of ['horizons', 'zones', 'layering', 'grid', 'upscale',
+                        'facies', 'porosity', 'permeability'] as const) markDone(step);
+    if (c.volumes) markDone('volumes');
+    if (ws.contacts.length) markDone('contacts');
+    setCaseWarnings(c.warnings);
+    setVersionId(id);
+  }, [setGrid, setUpscaled, setSimInfo, setVolumesState, setReservoir, bumpProps, markDone, ws.contacts.length]);
+
+  /**
+   * Build a case and SAVE it.
+   *
+   * Saving the built result, not just the recipe, is what makes v0 a reference: a case
+   * that is recomputed on every open tracks the code, so a changed cutoff or default
+   * would quietly redefine "ground truth" under the same name.
+   */
+  const runCase = useCallback(async (recipe = V0_RECIPE, id: string | null = null, groundTruth = false) => {
+    if (!ws.surfaces.length) return;
+    setRunning({ step: 'starting', done: 0, total: 6 });
+    setCaseWarnings([]);
+    try {
+      const out = await buildCase(ws, recipe, setRunning);
+      const simInfo = summariseSim(out.sim);
+      applyCase({ ...out, simInfo }, id);
+      if (id && ws.fieldId) {
+        await indexedDbCaseStore.put({
+          id, fieldId: ws.fieldId, savedAt: Date.now(), groundTruth,
+          grid: out.grid, upscaled: out.upscaled, simInfo,
+          volumes: out.volumes, reservoirZones: out.reservoirZones, warnings: out.warnings,
+        }).catch(() => undefined);
+      }
+    } catch (e) {
+      setCaseWarnings([(e as Error).message || 'the case failed to build']);
+    } finally {
+      setRunning(null);
+    }
+  }, [ws, applyCase]);
+
+  /** Load a saved case; build it only if nothing usable is stored. */
+  const openCase = useCallback(async (id: string, recipe = V0_RECIPE, groundTruth = false) => {
+    if (!ws.fieldId) return;
+    const saved = await indexedDbCaseStore.get(id).catch(() => null);
+    if (caseIsUsable(saved)) {
+      applyCase(saved!, id);
+      return;
+    }
+    await runCase(recipe, id, groundTruth);
+  }, [ws.fieldId, applyCase, runCase]);
+
+  /** Rebuild a stored case deliberately — the only way a reference case changes. */
+  const rebuildCase = useCallback(async (id: string, recipe = V0_RECIPE, groundTruth = false) => {
+    await indexedDbCaseStore.remove(id).catch(() => undefined);
+    await runCase(recipe, id, groundTruth);
+  }, [runCase]);
+
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (autoRan.current || !ready || grid || !ws.surfaces.length) return;
+    autoRan.current = true;
+    // LOAD, do not rebuild. v0 is ground truth: it is built once and then read, so
+    // opening the tab is instant and the reference cannot drift with the code.
+    void openCase('v0', V0_RECIPE, true);
+  }, [ready, grid, ws.surfaces.length, openCase]);
+
+  const zoneNames = useMemo(() => grid?.zoneLayers.map((z) => z.name) ?? [], [grid]);
+  const activeZones = reservoirZones ?? zoneNames;
+  const availableProps = useMemo(() => (grid?.packed.props ?? []).map((p) => p.name), [grid]);
+  // the 2D panel colours by the SAME property and the SAME range as the 3D scene
+  const sectionProp = useMemo(
+    () => (grid?.packed.props ?? []).find((p) => p.name === propKey) ?? grid?.packed.props?.[0] ?? null,
+    [grid, propKey],
+  );
+  const sectionRange = useMemo(
+    () => (grid?.packed && sectionProp ? propRange(grid.packed, sectionProp) : { lo: 0, hi: 1, n: 0 }),
+    [grid, sectionProp, propsVersion],
+  );
+
+  // the QC numbers, computed only while the panel is open — a full pass over every
+  // cell of every property is not something to run behind a closed drawer
+  const qc = useMemo(() => {
+    if (rightTab !== 'qc' || !grid) {
+      return { structure: null, properties: [], facies: null, upscale: null, volumes: null };
+    }
+    const p = grid.packed;
+    return {
+      structure: structureStats(p),
+      properties: propertyStats(p),
+      facies: faciesStats(p),
+      upscale: upscaled
+        ? upscaleStats(
+            upscaled.cells.map((c) => ({ well: c.well, i: c.i, j: c.j, phie: c.phie, ntg: c.ntg, nSamples: c.nSamples })),
+            upscaled.cells.map((c) => c.phie),
+            ws.bores.length,
+          )
+        : null,
+      volumes: volumes
+        ? volumeReport({
+            grvM3: volumes.grid.grvM3, ntg: volumes.grid.meanNtg, phi: volumes.grid.meanPhi,
+            sw: volumes.grid.meanSw, bo: 1.47,
+            stoiipMMSm3: volumes.grid.stoiipSm3 / 1e6,
+            swSource: 'assumed',
+          })
+        : null,
+    };
+  }, [rightTab, grid, upscaled, volumes, ws.bores.length, propsVersion]);
+
+  // ── the report + upscale tabs ──
+  //
+  // Computed only when their tab is open. A full pass over every cell of every property
+  // behind a closed panel is work nobody asked for.
+  const nzPerZone = useStatic((s) => s.nzPerZone);
+  const simSeedV = useStatic((s) => s.simSeed);
+  const simNodesV = useStatic((s) => s.simNodes);
+  const [upWell, setUpWell] = useState<string | null>(null);
+
+  const upscaleWells = useMemo(
+    () => [...new Set((upscaled?.cells ?? []).map((c) => c.well))].sort(),
+    [upscaled],
+  );
+  const upCells = useMemo(() => {
+    if (!grid || !upscaled) return [];
+    const w = upWell ?? upscaleWells[0];
+    return upscaled.cells
+      .filter((c) => c.well === w)
+      .map((c) => {
+        const sp = layerSpan(grid, c.j * grid.packed.nx + c.i, c.k);
+        return {
+          k: c.k, top: sp?.top ?? NaN, base: sp?.base ?? NaN,
+          phie: c.phie, sw: c.sw, ntg: c.ntg, nSamples: c.nSamples,
+        };
+      })
+      .filter((c) => Number.isFinite(c.top))
+      .sort((a, b) => a.top - b.top);
+  }, [grid, upscaled, upWell, upscaleWells]);
+
+  // ── the zone tops AT THIS WELL, as markers on the log ──
+  //
+  // Not the field-wide pick depths: the log is being compared against the CELLS, and
+  // the cells were blocked inside the zone boundaries the grid actually has at this
+  // column. A marker from a different surface would be a line the blocking never saw,
+  // and the reader would blame the upscaling for a mismatch that is really a mistie.
+  const upMarkers = useMemo(() => {
+    if (!grid || !upscaled) return [];
+    const w = upWell ?? upscaleWells[0];
+    const cell = upscaled.cells.find((c) => c.well === w);
+    if (!cell) return [];
+    const col = cell.j * grid.packed.nx + cell.i;
+    const out: { name: string; tvdss: number }[] = [];
+    for (const z of grid.zoneLayers) {
+      const top = layerSpan(grid, col, z.k0);
+      const base = layerSpan(grid, col, z.k0 + z.nz - 1);
+      if (top) out.push({ name: z.name.split('→')[0].trim() || z.name, tvdss: top.top });
+      // only the LAST zone contributes a base, or every boundary is drawn twice
+      if (base && z === grid.zoneLayers[grid.zoneLayers.length - 1]) {
+        out.push({ name: `${z.name.split('→').pop()?.trim() ?? z.name} base`, tvdss: base.base });
+      }
+    }
+    return out.filter((m) => Number.isFinite(m.tvdss));
+  }, [grid, upscaled, upWell, upscaleWells]);
+
+  // ── the raw log behind the blocked cells ──
+  //
+  // Without this the Upscale tab drew the step trace over an empty track, which is the
+  // one comparison it exists to make. Loaded per well and only while the tab is open —
+  // a log is tens of thousands of samples and there is no reason to hold every well's.
+  const [upSamples, setUpSamples] = useState<UpscaleSample[]>([]);
+  useEffect(() => {
+    const name = upWell ?? upscaleWells[0];
+    if (view !== 'upscale' || !name) { setUpSamples([]); return; }
+    let alive = true;
+    (async () => {
+      const bore = ws.bores.find((b) => b.name === name);
+      const asset = bore?.assetIds.log ? ws.assets.find((a) => a.id === bore.assetIds.log) : null;
+      if (!asset) { if (alive) setUpSamples([]); return; }
+      const log = await readRecord<DigestedLog>(asset).catch(() => null);
+      if (!log?.md?.length) { if (alive) setUpSamples([]); return; }
+
+      // THE DELIVERY MIXES DEPTH UNITS — read raw and 19 of 24 wells land three orders
+      // of magnitude out. Convert by the log's own declared unit, every time.
+      const f = depthToMetres(1, log.depthUnit);
+      if (f == null) { if (alive) setUpSamples([]); return; }
+      const mdM = log.md.map((v) => v * f);
+      const byFam = (fa: string) => log.curves.find((c) => c.family === fa);
+      const res = runPetro({
+        md: mdM,
+        gr: byFam('GR')?.values, rt: (byFam('RT') ?? byFam('RXO'))?.values,
+        rhob: byFam('RHOB')?.values, nphi: byFam('NPHI')?.values, dt: byFam('DT')?.values,
+      }, DEFAULT_PARAMS);
+
+      // TVDSS from the survey, minus the kelly bushing. A survey reports TVD below the
+      // DRILLING datum and the grid is sub-sea; using one as the other puts every
+      // sample one rig floor too deep and the step trace beside the curve rather than
+      // through it.
+      const tAsset = bore?.assetIds.trajectory ? ws.assets.find((a) => a.id === bore.assetIds.trajectory) : null;
+      const traj = tAsset ? await readRecord<{ stations?: TrajStation[] }>(tAsset).catch(() => null) : null;
+      const kbM = bore?.kbM ?? 0;
+      const stations = (traj?.stations ?? []).map((st) => ({ ...st, tvd: st.tvd - kbM }));
+
+      const out: UpscaleSample[] = mdM.map((m, i) => ({
+        md: m,
+        tvdss: stations.length ? mdToPoint(stations, m).tvd : m,
+        phie: res.phie[i], vsh: res.vsh[i], sw: res.sw[i], net: res.net[i],
+      }));
+      if (alive) setUpSamples(out);
+    })();
+    return () => { alive = false; };
+  }, [view, upWell, upscaleWells, ws.bores, ws.assets]);
+
+  const modelQc = useMemo(() => {
+    if (view !== 'report' || !grid) return { items: [], summary: null };
+    void propsVersion;
+    const items = auditModel(reportQcInput(grid, upscaled, simInfoState, ws));
+    return { items, summary: summariseModelQc(items) };
+  }, [view, grid, upscaled, simInfoState, ws, propsVersion]);
+
+  const breakdown = useMemo(() => {
+    if (view !== 'report' || !grid) return { byZone: [], bySegment: [], total: 0 };
+    const p = grid.packed;
+    const zoneOf: string[] = [];
+    for (const zl of grid.zoneLayers) for (let k = 0; k < zl.nz; k++) zoneOf[zl.k0 + k] = zl.name;
+    const prop = (n: string) => p.props.find((x) => x.name === n) ?? null;
+    const phiP = prop('phi'), swP = prop('sw'), ntgP = prop('ntg');
+    const owc = ws.contacts.find((c) => c.tvdss != null)?.tvdss;
+    const owcM = owc != null ? Math.abs(owc) : null;
+    const cells: Array<{ group: string; bulkM3: number; ntg: number; phi: number; sw: number }> = [];
+    const val = (pr: typeof phiP, i: number, j: number, l: number) =>
+      pr ? propValueAt(p, pr, i, j, l) : NaN;
+    for (let l = 0; l < p.nz; l++) {
+      for (let j = 0; j < p.ny; j++) {
+        for (let i = 0; i < p.nx; i++) {
+          const c = j * p.nx + i;
+          if (!p.activeCol[c]) continue;
+          const sp = layerSpan(grid, c, l);
+          if (!sp) continue;
+          const thk = sp.base - sp.top;
+          if (!(thk > 0)) continue;
+          // contact cut, fractional — an all-or-nothing cut swings by a whole cell
+          let frac = 1;
+          if (owcM != null) {
+            if (sp.top >= owcM) frac = 0;
+            else if (sp.base > owcM) frac = (owcM - sp.top) / thk;
+          }
+          if (frac <= 0) continue;
+          cells.push({
+            group: zoneOf[l] ?? `layer ${l}`,
+            bulkM3: p.dx * p.dy * thk * frac,
+            ntg: val(ntgP, i, j, l), phi: val(phiP, i, j, l), sw: val(swP, i, j, l),
+          });
+        }
+      }
+    }
+    const bo = 1.47;
+    const byZone = volumeBreakdown(cells, bo);
+    const total = byZone.reduce((a, r) => a + r.stoiipMMSm3, 0);
+    // segments need the pool decomposition; until that is threaded through, say so
+    // rather than showing the zone rows relabelled as segments
+    return { byZone, bySegment: [], total };
+  }, [view, grid, ws, propsVersion]);
+
   return (
     <div className="sms">
       <div className="sms-bar">
-        <span className="sms-title"><Boxes size={13} /> Static Model</span>
-        <span className="sms-sub">
+        <span className="sms-sub lead">
           {ready
             ? `${field.name} · ${ws.surfaces.length} horizons · ${zones} zones · ${ws.contacts.length} contact${ws.contacts.length === 1 ? '' : 's'}`
             : 'reading the workspace…'}
@@ -601,15 +1105,139 @@ export function StaticModel({ field }: { field: SearchEntry }) {
         </span>
       </div>
 
+      {/* processes are a RIBBON of pop-ups now; the left edge belongs to the tree */}
+      <ProcessRibbon tab={ribbon} onTab={setRibbon} />
+
+      {running && (
+        <div className="sms-running">
+          <div className="sms-running-box">
+            <b>Building the case</b>
+            <span>{running.step}</span>
+            <i style={{ width: `${(running.done / running.total) * 100}%` }} />
+            <em>{running.done} / {running.total}</em>
+          </div>
+        </div>
+      )}
+      {!running && caseWarnings.length > 0 && (
+        <div className="sms-warn">
+          {caseWarnings.map((w, i) => <span key={i}>{w}</span>)}
+          <button onClick={() => setCaseWarnings([])}>dismiss</button>
+        </div>
+      )}
+
       <div className="sms-shell">
-        <ProcessRail />
+        <ModelTree
+          ws={ws}
+          propKey={propKey} onProp={setPropKey}
+          availableProps={availableProps}
+          zones={zoneNames} activeZones={activeZones} onZones={setReservoirZones}
+          versionId={versionId}
+          onRebuild={() => void rebuildCase(versionId ?? 'v0', V0_RECIPE, versionId === 'v0')}
+          onLoadVersion={(v: GridVersion) => void openCase(v.id, {
+            horizons: v.recipe.horizons,
+            nzPerZone: v.recipe.nzPerZone,
+            layerScheme: v.recipe.layerScheme as 'proportional',
+            seed: v.recipe.seed,
+            simNodes: v.recipe.simNodes,
+            permAverage: v.recipe.permAverage as 'geometric',
+            owc: v.recipe.owc,
+          }, v.id === 'v0')}
+        />
         <div className="sms-stage">
           <FunctionBar stats={stats} />
-          <div className="sms-canvas">
-            <GeaStudio ws={ws} onStats={onStats} />
+          <div className={`sms-canvas${view === 'split' ? ' split' : ''}`}>
+            {view === 'report' && (
+              <div className="sms-pane sms-pane-doc">
+                <ReportTab
+                  fieldName={field.name}
+                  qc={modelQc.items}
+                  structure={qc.structure} properties={qc.properties}
+                  facies={qc.facies} upscale={qc.upscale} volumes={qc.volumes}
+                  byZone={breakdown.byZone} bySegment={breakdown.bySegment}
+                  totalStoiipMMSm3={breakdown.total}
+                  officialMMSm3={undefined}
+                  recipe={grid ? {
+                    horizons: grid.zoneLayers.length + 1, nzPerZone: nzPerZone,
+                    seed: simSeedV, simNodes: simNodesV,
+                    owc: ws.contacts.find((c) => c.tvdss != null)?.tvdss ?? undefined,
+                  } : undefined}
+                />
+              </div>
+            )}
+            {view === 'maps' && (
+              <div className="sms-pane sms-pane-doc">
+                {grid?.packed
+                  ? (
+                    <MapsTab
+                      grid={grid.packed as never}
+                      zones={grid.zoneLayers.map((z) => ({ name: z.name, k0: z.k0, nz: z.nz }))}
+                      owc={ws.contacts.find((c) => c.tvdss != null)?.tvdss ?? undefined}
+                      wells={ws.bores.filter((b) => b.x != null && b.y != null).map((b) => ({
+                        name: b.name, x: b.x as number, y: b.y as number,
+                        producer: b.role === 'oil-producer',
+                        injector: /inject/i.test(String(b.role ?? '')),
+                      }))}
+                    />
+                  )
+                  : <div className="mp-empty">Build the 3D grid first.</div>}
+              </div>
+            )}
+            {view === 'upscale' && (
+              <div className="sms-pane sms-pane-doc">
+                <UpscaleTab
+                  wells={upscaleWells}
+                  well={upWell} onWell={setUpWell}
+                  samples={upSamples} cells={upCells} markers={upMarkers}
+                  bias={qc.upscale ? { log: qc.upscale.logPhi.mean, blocked: qc.upscale.blockedPhi.mean } : null}
+                />
+              </div>
+            )}
+            {(view === '3d' || view === '2d' || view === 'split') && (
+              <div className="sms-pane">
+                <GeaStudio ws={ws} onStats={onStats} />
+              </div>
+            )}
+            {(view === 'section' || view === 'split') && (
+              <div className="sms-pane sms-pane-2d">
+                {grid?.packed && sectionProp
+                  ? (
+                    <SectionDrawer
+                      grid={grid.packed as never}
+                      prop={sectionProp}
+                      lo={sectionRange.lo} hi={sectionRange.hi}
+                      // follows the K player; on an I or J slice the map has no single
+                      // layer to show, so it falls back to the top
+                      layer={sliceAxis === 'k' ? sliceIndex : 0}
+                      points={secPts} onPoints={setSecPts}
+                      nz={grid.packed.nz}
+                      onLayer={(l) => { setSliceAxis('k'); setSliceOn(true); setSliceIndex(l); }}
+                      wells={ws.bores
+                        .filter((b) => b.x != null && b.y != null)
+                        .map((b) => ({ name: b.name, x: b.x as number, y: b.y as number,
+                          producer: b.role === 'oil-producer',
+                          injector: /inject/i.test(String(b.role ?? '')) }))}
+                    />
+                  )
+                  : <div className="sms-2d-empty">Build the 3D grid and model a property to draw a section.</div>}
+              </div>
+            )}
             <Dialogs ws={ws} />
           </div>
         </div>
+        {rightTab === 'qc' && (
+          <aside className="sms-qc">
+            <div className="sms-qc-head">
+              <span>Model QC</span>
+              <button onClick={() => setRightTab('none')}>×</button>
+            </div>
+            <QcPanel {...qc} />
+          </aside>
+        )}
+        {rightTab !== 'qc' && (
+          <button className="sms-qc-tab" onClick={() => setRightTab('qc')} title="Model QC — statistics and the volumetric report">
+            QC
+          </button>
+        )}
       </div>
     </div>
   );
