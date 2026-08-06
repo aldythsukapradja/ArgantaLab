@@ -87,7 +87,7 @@ export function CosmoSettings({ open, onClose, dark, setDark, onPresent }: {
               <span className="si"><Presentation size={15} /></span>
               <div>
                 <div className="st">Indonesia's Geological Legacy</div>
-                <div className="sd">9 scenes · ~18 min · every figure read live from the corpus</div>
+                <div className="sd">7 scenes · ~15 min · every figure read live from the corpus</div>
               </div>
               <button className="newbtn" onClick={() => { onClose(); onPresent?.(); }}>Present</button>
             </div>

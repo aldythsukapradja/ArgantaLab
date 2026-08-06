@@ -7,7 +7,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { SCENES } from './scenes';
 import { gsap, prefersReducedMotion, revertSplits } from './timeline';
+import { Cosmos, COSMOS_VARIANTS, type CosmosVariant } from './Cosmos';
 import './keynote.css';
+// EventsChartView and TectonoStratChart are styled by the exploration suite's
+// stylesheet, which normally arrives with the lazily-loaded ExplorationShell.
+// The keynote mounts them directly, so it has to bring their CSS itself —
+// without this the charts render as unstyled stacked text.
+import '../tabs/exploration/exploration-suite.css';
 
 export function KeynoteSurface({ onExit, startDark = true }: {
   onExit: () => void; startDark?: boolean;
@@ -17,6 +23,9 @@ export function KeynoteSurface({ onExit, startDark = true }: {
   const [overview, setOverview] = useState(false);
   const [presenter, setPresenter] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  // The sky. Cycled with G so the three treatments can be compared on the wall
+  // rather than argued about in the abstract.
+  const [sky, setSky] = useState<CosmosVariant>('terrain');
   const stageRef = useRef<HTMLDivElement>(null);
   const scene = SCENES[index];
 
@@ -46,6 +55,9 @@ export function KeynoteSurface({ onExit, startDark = true }: {
         case 'End': e.preventDefault(); go(SCENES.length - 1); break;
         case 'o': case 'O': setOverview((v) => !v); break;
         case 't': case 'T': setDark((v) => !v); break;
+        case 'g': case 'G':
+          setSky((v) => COSMOS_VARIANTS[(COSMOS_VARIANTS.indexOf(v) + 1) % COSMOS_VARIANTS.length]);
+          break;
         case 'p': case 'P': setPresenter((v) => !v); break;
         case 'f': case 'F':
           if (document.fullscreenElement) document.exitFullscreen();
@@ -92,6 +104,10 @@ export function KeynoteSurface({ onExit, startDark = true }: {
 
   return createPortal(
     <div className={'kn-root' + (dark ? ' dark' : ' light')} data-reduced={prefersReducedMotion() ? '1' : '0'}>
+      {/* One sky for the whole deck, OUTSIDE the keyed stage — a backdrop that
+          remounted per slide would flash on every advance. */}
+      <Cosmos variant={sky} />
+
       <div className="kn-stage" ref={stageRef} key={index}>
         <Body />
       </div>

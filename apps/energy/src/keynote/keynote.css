@@ -35,7 +35,9 @@
 }
 
 .kn-root.dark{
-  --bg:#050608; --surface:#0B1520;
+  /* True black. Not a near-black: on a projector any lift in the ground shows
+     as a grey wash, and the deck's whole look is stars on nothing. */
+  --bg:#000000; --surface:#0B1520;
   --primary:#fff; --secondary:#B9C2CE;
   --indonesia:#E53935; --geology:#D8B15A; --technology:#69D6FF;
   --hairline:rgba(255,255,255,.10); --veil:rgba(255,255,255,.045);
@@ -142,6 +144,10 @@
    The archipelago is never covered: the copy lives in a fixed bottom band and
    the camera is padded by that same fraction (TITLE_BAND in scenes.tsx). */
 .kn-landing{overflow:hidden}
+/* No mask on the map any more. It was a workaround for the white halo, and
+   the halo is gone at the source: the sky is fully transparent with
+   atmosphere-blend 0, so the deck's terrain shows around the globe by itself.
+   A mask here only risked cropping Sumatra and Papua at the final zoom. */
 .kn-lower{position:absolute;left:0;right:0;bottom:0;z-index:3;
   height:34%;display:flex;flex-direction:column;justify-content:center;
   padding:0 var(--pad) calc(var(--gap)*2.6);pointer-events:none}
@@ -171,12 +177,17 @@
   animation:kn-pop-in .55s cubic-bezier(.16,1,.3,1) both}
 @keyframes kn-pop-in{from{opacity:0;transform:translateX(34px)}}
 .kn-dossier header{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--gap)}
-.kn-dossier-meta{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;
-  padding-bottom:calc(var(--gap)*.9);border-bottom:1px solid var(--hairline);
-  font-size:calc(var(--u)*.7);color:var(--secondary)}
-.kn-dossier-meta span{flex:1;min-width:14ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.kn-dossier-meta b{font-family:'JetBrains Mono',monospace;font-size:calc(var(--u)*.62);
-  letter-spacing:.1em;color:var(--primary)}
+/* Facts as capsules, directly under the basin name. Four small certainties beat
+   one long internal string. */
+.kn-dossier-id{min-width:0}
+.kn-caps{display:flex;flex-wrap:wrap;gap:7px;
+  padding-bottom:calc(var(--gap)*1.1);border-bottom:1px solid var(--hairline)}
+.kn-cap{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:99px;
+  border:1px solid var(--hairline);background:var(--veil);
+  font-size:calc(var(--u)*.62);color:var(--secondary);white-space:nowrap}
+.kn-cap svg{flex:0 0 auto;color:var(--geology)}
+.kn-cap b{font-family:'JetBrains Mono',monospace;color:var(--primary);
+  font-variant-numeric:tabular-nums}
 /* Provenance as texture: the weakest citation state on screen, stated. */
 .kn-cite{font-style:normal;padding:2px 9px;border-radius:99px;font-size:calc(var(--u)*.56);
   letter-spacing:.14em;text-transform:uppercase;border:1px solid currentColor}
@@ -186,11 +197,40 @@
 .kn-cite.none{color:var(--secondary)}
 .kn-dossier-chart h4{margin:0 0 calc(var(--gap)*.7);font-size:calc(var(--u)*.64);
   letter-spacing:.2em;text-transform:uppercase;font-weight:600;color:var(--secondary)}
-/* The charts are built for the Knowledge Bank's light panels; scoping a dark
-   surface here is cheaper and safer than theming them, and keeps the deck's
-   one-theme rule without touching a shared component. */
-.kn-dossier-chart{--surface:#0B1520;--panel:#0B1520;color:var(--primary)}
-.kn-dossier-chart svg text{fill:var(--secondary)}
+
+/* THEME. The Knowledge Bank's charts read the cosmo design tokens, and those
+   are switched by `html[data-ui="cosmo"].dark` — a class the SHELL owns. The
+   app boots light, so mounting these charts inside a deck that is always black
+   gave them light-theme ink on a black rail: unreadable.
+   Restating the dark token block here scopes it to the drawer, so the charts
+   are dark whatever the app behind them is doing, and the deck never has to
+   reach out and mutate a global class it does not own. Values are copied from
+   the `.dark` block in cosmo-system.css — keep them in step. */
+.kn-dossier{
+  --bg:#070d18; --panel:#0f172a; --panel2:#111a2e; --panel3:#0c1526;
+  --ink:#e2e8f0; --ink2:#94a3b8; --ink3:#64748b;
+  --line:#1e293b; --line2:#172033;
+  --teal:#0FB5A6; --teal-soft:#0b3a36; --teal-ink:#0a8a7f;
+  --blue:#2563eb; --cyan:#22d3ee; --green:#10b981; --purple:#7c3aed;
+  --amber:#f59e0b; --red:#ef4444; --violet:#b37df0; --orange:#e58d4b;
+  --shadow:0 1px 2px rgb(0 0 0/.3),0 2px 8px rgb(0 0 0/.35);
+  --shadow-lg:0 20px 60px rgb(0 0 0/.5);
+  --mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+  --sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+  color:var(--ink);
+}
+/* The suite's rules assume the app's 13px root; the deck's root is larger, so
+   the charts need their own baseline or every label doubles in size. */
+.kn-dossier-chart{font-size:13px;line-height:1.45;font-family:var(--sans)}
+/* HEIGHT. Both charts are built as `flex:1; min-height:0` children of a
+   fixed-height column in the Knowledge Bank. Dropped into the drawer — whose
+   height is auto — `flex:1` resolves against nothing and `min-height:0` lets
+   them collapse to zero. That is why the tectonostratigraphy showed its column
+   headers and an axis label and nothing in between: it was rendering
+   correctly, at no height at all. Both need an explicit box here. */
+.kn-dossier-chart .exs-tecto{height:clamp(260px,34vh,400px);min-height:260px}
+.kn-dossier-chart .exs-events{min-height:clamp(210px,26vh,320px)}
+.kn-dossier-chart .exs-events,.kn-dossier-chart .exs-tecto{max-width:100%}
 .kn-pop-x{width:28px;height:28px;flex:0 0 auto;border:1px solid var(--hairline);border-radius:50%;
   background:transparent;color:var(--secondary);font-size:17px;line-height:1;cursor:pointer;font-family:inherit}
 .kn-pop-x:hover{background:var(--veil);color:var(--primary)}
@@ -206,6 +246,18 @@
 .kn-pop-src{display:block;margin-top:calc(var(--gap)*1.1);font-size:calc(var(--u)*.58);
   color:var(--secondary);opacity:.7;letter-spacing:.05em}
 
+/* ══ THE SKY ═════════════════════════════════════════════════════════════════
+   One persistent cosmos behind every scene, mounted outside the keyed stage.
+   Sits at z-index 0; the stage is 2, so scene content — including the map,
+   which is opaque — always covers it where it needs to. */
+.kn-cosmos{position:absolute;inset:0;z-index:0;pointer-events:none}
+.kn-cosmos canvas{display:block;width:100%;height:100%}
+.kn-stage{z-index:2}
+/* Black, and nothing else. An earlier version put a faint warm hub low-centre;
+   on a bright screen it reads as a smudge rather than as depth, and the deck
+   asked for black with stars. The terrain and the starfield supply the depth. */
+.kn-root.dark{background:#000}
+
 /* ══ three.js stage (bloom lives here) ═══════════════════════════════════════ */
 .kn-gl{position:absolute;inset:0;z-index:1;pointer-events:none}
 .kn-gl canvas{display:block}
@@ -213,49 +265,193 @@
 /* ══ scene furniture ═════════════════════════════════════════════════════════ */
 .kn-starfield{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
 
-/* slide 2 — the descent */
-.kn-traj{position:relative;margin:calc(var(--gap)*2) 0 calc(var(--gap)*1.2)}
-.kn-traj-svg{width:100%;height:clamp(96px,12vw,208px);display:block;overflow:visible}
-.kn-traj-svg path{fill:none;stroke:var(--geology);stroke-width:2.6;stroke-linecap:round;
-  filter:drop-shadow(0 0 14px color-mix(in srgb,var(--geology) 62%,transparent))}
-.kn-traj-stages{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--gap);margin-top:var(--gap)}
-.kn-traj-stage{display:flex;flex-direction:column;gap:7px;align-items:flex-start}
-.kn-traj-stage i{width:7px;height:7px;border-radius:50%;background:var(--geology);
-  box-shadow:0 0 16px color-mix(in srgb,var(--geology) 80%,transparent)}
-.kn-traj-stage b{font-size:calc(var(--u)*.86);font-weight:600;line-height:1.26;letter-spacing:var(--track-body)}
-.kn-proof{display:flex;flex-wrap:wrap;gap:9px}
-.kn-proof-chip{padding:7px 15px;border:1px solid var(--hairline);border-radius:99px;
-  font-size:calc(var(--u)*.76);color:var(--secondary);background:var(--veil)}
+/* slide 2 — nine stages on one dated axis, 2010 → 2026+.
+   Every row is a fixed height so logos, names, employers and years line up
+   across all nine columns. Alignment is the whole design here: the moment one
+   column's name wraps differently the strip reads as assembled. */
+/* Ten columns will not fit inside the deck's 1560px reading measure — at that
+   width each column is ~10ch and "Geodynamic Research Group" ellipses to
+   nothing. This one strip breaks the measure and runs full-bleed; the headline
+   above it keeps the shared left edge, so the alignment still reads. */
+.kn-journey{position:relative;margin:calc(var(--gap)*2.2) 0 0;
+  width:calc(100% + var(--pad) * 2 - 96px);margin-left:calc(-1 * var(--pad) + 48px)}
+.kn-journey-row{display:grid;grid-template-columns:repeat(10,1fr);gap:calc(var(--gap)*.5);
+  align-items:end}
+.kn-jstage{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
 
-/* slide 3 — four dimensions */
-.kn-dims{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:calc(var(--gap)*1.5) calc(var(--gap)*2.4);margin-top:calc(var(--gap)*1.8)}
-.kn-dim{display:grid;grid-template-columns:auto 1fr;gap:0 var(--gap);align-items:center}
-.kn-dim-dot{grid-row:1/3;width:11px;height:11px;border-radius:50%;background:var(--technology);
-  box-shadow:0 0 26px color-mix(in srgb,var(--technology) 85%,transparent)}
-.kn-dim b{font-size:calc(var(--u)*1.28);font-weight:600;letter-spacing:var(--track-body);line-height:1.2}
-.kn-dim em{font-style:normal;font-size:calc(var(--u)*.72);color:var(--secondary);letter-spacing:.02em}
+/* Fixed logo band — a 2-line name below it then starts at the same y in every
+   column regardless of how tall the mark happens to be.
+   The chip is not decoration. Measured against this deck's #050608 ground,
+   North Oil Company's navy wordmark fails a 3:1 readability floor across 25% of
+   its ink and Pertamina's dark green across 49% — transparency alone makes them
+   WORSE, not better. Recolouring someone's trademark is not ours to do, so the
+   marks sit on the white they were drawn for. Applied to all six: a mixed
+   treatment reads as an accident. */
+.kn-jlogo{height:clamp(30px,2.8vw,44px);display:inline-flex;align-items:center}
+/* No white chip — the marks are REVERSED variants, generated by lifting only
+   the ink that failed a 4.5:1 floor against this deck's ground, in HLS so hue
+   and saturation survive. Dark navy became light navy, dark green light green:
+   a brand's own dark-background treatment, not a recolour. The `-light.png`
+   beside each file is the untouched on-white master. */
+.kn-jlogo img{max-height:100%;max-width:100%;width:auto;object-fit:contain;display:block;
+  filter:drop-shadow(0 0 14px rgb(255 255 255/.16)) drop-shadow(0 2px 6px rgb(0 0 0/.6))}
 
-/* slide 4 — the turn: risk and answer in ONE frame, two acts.
+/* EXACTLY two lines, always. The second may be empty; it still holds the row.
+   Fixed heights on all three text blocks are what keep the ten columns on
+   shared baselines — the moment one wraps differently the strip looks
+   assembled rather than designed. */
+.kn-jname{margin:0;display:flex;flex-direction:column;
+  font-size:calc(var(--u)*.76);font-weight:600;line-height:1.2;
+  letter-spacing:var(--track-body);height:2.4em}
+.kn-jname span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kn-jorg{font-size:calc(var(--u)*.62);font-weight:500;line-height:1.2;color:var(--technology);
+  height:2.4em;overflow:hidden}             /* two lines: "Pertamina Hulu Mahakam" wraps */
+/* Wraps to two lines rather than ellipsing. "Geodynamic Research Group" and
+   "Step-Out Potential · M.Sc · Paris" are the point of the line — truncating
+   them to "Geodynamic Research …" says nothing at all. */
+.kn-jwhere{font-size:calc(var(--u)*.55);color:var(--secondary);line-height:1.2;
+  height:2.4em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical}
+.kn-jyear{margin-top:3px;font-family:'JetBrains Mono',monospace;font-size:calc(var(--u)*.58);
+  letter-spacing:.04em;color:var(--geology);white-space:nowrap}
+.kn-jtick{width:7px;height:7px;border-radius:50%;background:var(--geology);margin-top:8px;
+  box-shadow:0 0 16px color-mix(in srgb,var(--geology) 85%,transparent)}
+
+.kn-jaxis{position:relative;height:34px;margin-top:-4px}
+.kn-jaxis-line{position:absolute;left:0;right:0;top:0;height:1px;display:block;
+  background:linear-gradient(90deg,
+    color-mix(in srgb,var(--geology) 70%,transparent),
+    color-mix(in srgb,var(--geology) 22%,transparent))}
+.kn-jaxis-tick{position:absolute;top:12px;transform:translateX(-50%);
+  font-family:'JetBrains Mono',monospace;font-size:calc(var(--u)*.58);
+  letter-spacing:.1em;color:var(--secondary);white-space:nowrap}
+.kn-jaxis-tick:first-of-type{transform:none}
+.kn-jaxis-tick:last-of-type{transform:translateX(-100%)}
+
+/* slide 4 — the descent, then the idea. Two acts, one frame.
+   The scale word is the largest type in the deck: during Act I it is the ONLY
+   thing to read, and it has to survive being changed five times without the
+   layout shifting, hence the fixed height. */
+.kn-descent .kn-gl{opacity:.6}
+.kn-scale{margin:0;font-size:calc(var(--u)*4.6);line-height:1;font-weight:600;
+  letter-spacing:-.036em;height:1em;display:flex;align-items:center;justify-content:center;
+  color:var(--primary);text-shadow:0 0 60px color-mix(in srgb,var(--technology) 45%,transparent)}
+.kn-scale-note{margin:calc(var(--gap)*.7) 0 0;font-size:calc(var(--u)*.78);
+  color:var(--secondary);letter-spacing:.06em;height:1.4em}
+.kn-rungs{display:flex;gap:9px;justify-content:center;margin-top:calc(var(--gap)*1.5)}
+.kn-rung{width:32px;height:2px;border-radius:2px;background:var(--hairline);
+  transition:background .6s cubic-bezier(.16,1,.3,1),box-shadow .6s}
+.kn-rung.on{background:var(--technology);
+  box-shadow:0 0 14px color-mix(in srgb,var(--technology) 75%,transparent)}
+.kn-descent-line{margin-top:calc(var(--gap)*2.4);font-size:calc(var(--u)*2.3);
+  max-width:22ch;margin-left:auto;margin-right:auto;color:var(--secondary)}
+
+/* The lens — the ONE circle on this slide. Centred on the stage and sitting
+   behind the type, which is why it is absolutely positioned rather than in the
+   flow: in the flow it landed above the copy while the old depth rail drew its
+   rings around the frame centre, and two off-centre circles read as a bug.
+   Everything inside is clipped to the circle, so the zoom can run as deep as it
+   likes without ever spilling onto the words. */
+.kn-lens{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(62vh,58vw);aspect-ratio:1;z-index:1;pointer-events:none;
+  filter:drop-shadow(0 0 60px color-mix(in srgb,var(--technology) 26%,transparent))}
+.kn-lens svg{width:100%;height:100%;display:block;overflow:visible}
+.kn-lens-ring{fill:none;stroke:color-mix(in srgb,var(--technology) 42%,transparent)}
+/* Kutei is the subject of the descent, so it is the only lit outline. */
+.kn-lens-ring.on{fill:color-mix(in srgb,var(--technology) 12%,transparent);
+  stroke:var(--technology)}
+.kn-lens-field{fill:color-mix(in srgb,var(--geology) 45%,transparent)}
+.kn-lens-field.on{fill:var(--geology);
+  filter:drop-shadow(0 0 1.5px color-mix(in srgb,var(--geology) 90%,transparent))}
+.kn-lens-rim{fill:none;stroke:color-mix(in srgb,var(--technology) 45%,transparent);stroke-width:.35}
+.kn-lens-cross line{stroke:color-mix(in srgb,var(--technology) 60%,transparent);stroke-width:.35}
+/* A ground behind the type so a lit outline never runs through a word. */
+.kn-descent .kn-scale,.kn-descent .kn-scale-note{
+  text-shadow:0 0 26px #000,0 0 60px #000,0 0 12px #000}
+
+/* The descent, split. Copy and lens hold the left; the wedge it names is shown
+   live on the right. Naming a body of work is a claim, showing it is evidence —
+   and this deck's argument is the difference between the two. */
+.kn-descent-inner{max-width:none;padding:0 var(--pad)}
+.kn-descent-split .kn-turn-stack{
+  max-width:min(46ch,44vw);margin:0;text-align:left;justify-items:start}
+.kn-descent-split .kn-scale,.kn-descent-split .kn-descent-line{text-align:left}
+.kn-descent-split .kn-descent-line{margin-left:0;margin-right:0}
+.kn-descent-split .kn-rungs{justify-content:flex-start}
+.kn-descent-split .kn-four{justify-content:flex-start}
+/* The lens is no longer the centre of the stage — it sits above the copy in the
+   left column, at a size that leaves the right half to the evidence. */
+.kn-descent-split .kn-lens{position:relative;left:auto;top:auto;transform:none;
+  width:min(30vh,26vw);margin:0 0 calc(var(--gap)*1.4)}
+
+.kn-wedges{position:absolute;right:var(--pad);top:50%;transform:translateY(-50%);
+  z-index:2;width:min(52ch,44vw);height:min(66vh,620px);
+  display:flex;flex-direction:column;gap:calc(var(--gap)*.9);
+  padding:calc(var(--gap)*1.3) calc(var(--gap)*1.4);
+  border:1px solid var(--hairline);border-radius:18px;
+  background:color-mix(in srgb,#0B1520 72%,transparent);
+  backdrop-filter:blur(20px);box-shadow:0 30px 90px rgb(0 0 0/.5)}
+.kn-wedges header{display:flex;justify-content:space-between;align-items:baseline;
+  padding-bottom:calc(var(--gap)*.7);border-bottom:1px solid var(--hairline)}
+.kn-wedge-scope{font-family:'JetBrains Mono',monospace;font-size:calc(var(--u)*.6);
+  letter-spacing:.16em;text-transform:uppercase;color:var(--technology)}
+.kn-wedge-count{font-size:calc(var(--u)*.64);color:var(--secondary)}
+/* The pane is keyed on the stop, so React remounts it and this replays. */
+.kn-wedge-pane{flex:1;min-height:0;display:flex;flex-direction:column;
+  animation:kn-wedge-in .55s cubic-bezier(.16,1,.3,1) both}
+@keyframes kn-wedge-in{from{opacity:0;transform:translateY(14px)}}
+.kn-wedge-body{display:flex;flex-direction:column;gap:calc(var(--gap)*1.3);justify-content:center;flex:1}
+.kn-wedge-body h5{margin:0 0 9px;display:flex;align-items:center;gap:7px;
+  font-size:calc(var(--u)*.62);letter-spacing:.14em;text-transform:uppercase;
+  font-weight:600;color:var(--secondary)}
+.kn-wedge-bar{display:flex;height:11px;border-radius:99px;overflow:hidden;background:var(--veil)}
+.kn-wedge-bar i{display:block;height:100%}
+/* 2px of surface between segments, so adjacent fills read as separate. */
+.kn-wedge-bar i+i{box-shadow:-2px 0 0 #0B1520}
+.kn-wedge-key{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:9px;
+  font-size:calc(var(--u)*.62);color:var(--secondary)}
+.kn-wedge-key span{display:inline-flex;align-items:center;gap:6px}
+.kn-wedge-key i{width:8px;height:8px;border-radius:2px}
+.kn-wedge-key b{color:var(--primary);font-variant-numeric:tabular-nums}
+.kn-wedge-ops{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.kn-wedge-ops li{display:grid;grid-template-columns:1fr 34% auto;align-items:center;gap:10px;
+  font-size:calc(var(--u)*.66)}
+.kn-wedge-op{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--secondary)}
+.kn-wedge-ops i{display:block;height:7px;border-radius:99px;background:var(--technology);
+  box-shadow:0 0 12px color-mix(in srgb,var(--technology) 55%,transparent)}
+.kn-wedge-ops b{font-variant-numeric:tabular-nums;color:var(--primary);
+  font-family:'JetBrains Mono',monospace;font-size:calc(var(--u)*.62)}
+
+/* slide 3 — the mission */
+.kn-mission-foot{margin:calc(var(--gap)*1.6) 0 0;font-size:calc(var(--u)*.92);
+  color:var(--secondary);letter-spacing:var(--track-body)}
+.kn-mission-foot b{color:var(--geology);font-weight:600}
+.kn-mission-thesis{margin:calc(var(--gap)*1.5) 0 0;font-size:calc(var(--u)*1.55);
+  font-weight:600;letter-spacing:-.02em;max-width:32ch}
+
+/* slide 6 — what it leaves behind */
+.kn-keeps{list-style:none;margin:calc(var(--gap)*1.6) 0 0;padding:0;
+  display:flex;flex-direction:column;gap:calc(var(--gap)*.9)}
+.kn-keeps li{position:relative;padding-left:calc(var(--gap)*1.3);
+  font-size:calc(var(--u)*1.02);line-height:1.35;letter-spacing:var(--track-body)}
+.kn-keeps li::before{content:'';position:absolute;left:0;top:.55em;
+  width:6px;height:6px;border-radius:50%;background:var(--geology);
+  box-shadow:0 0 14px color-mix(in srgb,var(--geology) 80%,transparent)}
+
+/* the previous turn (superseded, rules kept for the shared act machinery) */
    The particle field is pushed right back so the type is the subject; a dimmer
    field reads as a network, a bright dense one reads as television static
    (which is exactly what the two separate slides looked like). */
-.kn-turn .kn-gl{opacity:.44}
-.kn-turn::after{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
-  background:radial-gradient(ellipse 68% 56% at 50% 50%,
-    color-mix(in srgb,var(--bg) 66%,transparent) 0%,transparent 74%)}
+/* No centre scrim here. It existed to lift type off a busy particle field, but
+   the lens is now the subject and a 58% black wash over the middle of frame
+   would dim exactly the thing the audience is meant to be watching. The scale
+   words carry their own text-shadow instead. */
 /* Both acts occupy the SAME grid cell, so the turn happens in place — the frame
    must not jump to a new layout halfway through one thought. */
 .kn-turn-stack{display:grid;max-width:min(26ch,90vw)}
 .kn-turn-stack>.kn-act{grid-area:1/1}
 .kn-act .kn-eyebrow{margin-bottom:calc(var(--gap)*2)}
 .kn-eyebrow-gold{color:var(--geology);opacity:1}
-.kn-mega-b{color:var(--secondary)}
-.kn-tear{width:100%;height:24px;margin:calc(var(--gap)*1.5) 0;overflow:visible}
-.kn-tear svg{width:100%;height:100%;overflow:visible}
-.kn-tear path{fill:none;stroke:var(--indonesia);stroke-width:2;stroke-linecap:round;
-  stroke-linejoin:round;vector-effect:non-scaling-stroke;opacity:0;
-  filter:drop-shadow(0 0 18px color-mix(in srgb,var(--indonesia) 78%,transparent))}
 
 /* The flag beat, closing act II. RED above WHITE: Sang Saka Merah-Putih.
    A band along the floor of the frame, NOT a wash across the middle. v1 laid a
@@ -271,16 +467,7 @@
   gap:calc(var(--gap)*.6) calc(var(--gap)*2.2);margin-top:calc(var(--gap)*2.4)}
 .kn-four-line{font-size:calc(var(--u)*1.22);font-weight:500;color:var(--geology);letter-spacing:-.012em}
 
-/* slide 6 — the chain */
-.kn-chain{display:grid;grid-template-columns:repeat(9,1fr);gap:8px;align-items:end;
-  margin-top:calc(var(--gap)*2);min-height:clamp(120px,15vw,240px)}
-.kn-chain-node{display:flex;flex-direction:column;align-items:center;gap:12px}
-.kn-chain-node i{display:block;width:4px;border-radius:99px;
-  background:linear-gradient(to top,var(--technology),var(--geology));
-  box-shadow:0 0 20px color-mix(in srgb,var(--geology) 62%,transparent)}
-.kn-chain-node b{font-size:calc(var(--u)*.76);font-weight:600;text-align:center;line-height:1.22}
-
-/* slide 7 — the live demo.
+/* slide 5 — the live demo.
    The demo IS the slide, so it takes three quarters of the wall and the copy is
    compressed into a left rail. Sizing is height-driven (`height` + the frame's
    own aspect-ratio derives the width) because the binding constraint on a
@@ -392,9 +579,23 @@
   .kn-root,.kn-dot,.kn-ov-card,.kn-chrome,.kn-device{transition:none!important}
 }
 @media (max-width:1100px){
-  .kn-traj-stages{grid-template-columns:repeat(4,1fr);row-gap:16px}
-  .kn-chain{grid-template-columns:repeat(5,1fr);row-gap:20px}
-  .kn-dims,.kn-stages,.kn-overview-grid{grid-template-columns:1fr}
+  /* Nine columns need ~9 % of the width each; below 1100px that is under 10ch
+     and every employer name ellipses to nothing. Three rows of three, and the
+     axis goes with them — a dated line under wrapped rows would be a lie. */
+  /* Narrow: the wedge panel would leave the copy at ~20ch. Drop the evidence
+     rail and let the descent read as it did before — the lens back at centre,
+     copy centred under it. */
+  .kn-wedges{display:none}
+  .kn-descent-split .kn-turn-stack{max-width:min(26ch,90vw);margin:0 auto;
+    text-align:center;justify-items:center}
+  .kn-descent-split .kn-scale,.kn-descent-split .kn-descent-line{text-align:center}
+  .kn-descent-split .kn-descent-line{margin-left:auto;margin-right:auto}
+  .kn-descent-split .kn-rungs,.kn-descent-split .kn-four{justify-content:center}
+  .kn-descent-split .kn-lens{width:min(40vh,62vw);margin-left:auto;margin-right:auto}
+  .kn-journey{width:100%;margin-left:0}
+  .kn-journey-row{grid-template-columns:repeat(4,1fr);row-gap:calc(var(--gap)*1.4);align-items:start}
+  .kn-jaxis{display:none}
+  .kn-stages,.kn-overview-grid{grid-template-columns:1fr}
   .kn-overview-grid{grid-template-columns:repeat(2,1fr)}
   .kn-device.desktop{width:88vw}
   .kn-device.mobile{width:52vw}

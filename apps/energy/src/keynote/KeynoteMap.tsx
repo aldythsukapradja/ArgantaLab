@@ -29,18 +29,56 @@ export interface MapTarget {
 
 /** Deep space, not daylight haze. This single call is the difference between
  *  "a map of the world" and "a planet seen from orbit". */
+/** Black, and NO atmosphere.
+ *
+ *  The pale halo on the globe's limb is MapLibre's atmosphere, and the style
+ *  spec's DEFAULT for `atmosphere-blend` is 0.8 — so leaving the sky alone
+ *  guarantees a bright rim on a deck that is black everywhere else.
+ *  `drawAtmosphere` returns early at exactly 0, which is why this is the only
+ *  value that works; anything else merely tints it.
+ *
+ *  Two ways this silently reverts, both handled below:
+ *    · `Style.setSky` VALIDATES and returns early on a bad value — no throw, no
+ *      warning, just a sky that never changed.
+ *    · CockpitMap owns a `[dark, theme]` effect that re-paints the background
+ *      layer, so a single call at ready-time gets overwritten later.
+ *
+ *  It is re-applied on every `styledata` for that reason, and failures are
+ *  reported rather than swallowed: an earlier version caught and discarded the
+ *  error, which is exactly why the white rim survived several rounds of
+ *  "fixing" it. */
 function setSpaceSky(map: MapLibreMap) {
-  try {
-    map.setSky({
-      'sky-color': '#04070d',
-      'horizon-color': '#0d2436',
-      'fog-color': '#050912',
-      'sky-horizon-blend': 0.6,
-      'horizon-fog-blend': 0.4,
-      'fog-ground-blend': 0.1,
-      'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 0.55, 6, 0.1, 9, 0],
-    });
-  } catch { /* older style spec — the vignette still carries it */ }
+  let applying = false;
+  const apply = () => {
+    // setSky calls _update, which fires `styledata` again. Without this guard
+    // the listener below re-enters forever and pegs the render loop.
+    if (applying) return;
+    applying = true;
+    try {
+      // MapLibre's OWN "no sky" preset — the object it falls back to when you
+      // pass nothing. Fully transparent, atmosphere off. Transparent beats
+      // black here: it kills the halo AND lets the deck's terrain show through
+      // around the globe, which is the look this slide wants anyway.
+      map.setSky({
+        'sky-color': 'transparent',
+        'horizon-color': 'transparent',
+        'fog-color': 'transparent',
+        'fog-ground-blend': 1,
+        'atmosphere-blend': 0,
+      });
+    } catch (err) {
+      // Loud on purpose. A silent catch here is exactly why the white rim
+      // survived several rounds of being "fixed".
+      console.error('[keynote] could not clear the sky', err);
+    } finally {
+      applying = false;
+    }
+  };
+  apply();
+  // CockpitMap owns a [dark, theme] effect that repaints the style after this
+  // runs, so once at ready-time is not enough.
+  map.on('style.load', apply);
+  map.on('styledata', apply);
 }
 
 /** Ignite the thirteen Indonesian provinces: a warm fill, a bright edge and a

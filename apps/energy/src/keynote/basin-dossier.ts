@@ -11,6 +11,7 @@
 // inside a keynote popup would drag in its scope store, its figure gating and
 // its cross-section header, none of which belong on a title slide.
 import { loadKbSpine, type KbSpine } from '../dataqc/masterkb';
+import { provinceStats, loadScopeFields, loadFieldDetail } from '../tabs/exploration/data';
 import { buildPetroleumSystemChart, type EventsChart } from '../tabs/exploration/basin-insight';
 import type { TectonoPeriod, TectonoCycle, TectonoElement } from '../tabs/exploration/BasinCharts';
 
@@ -29,6 +30,20 @@ export interface BasinDossier {
    *  claims "measure it, don't claim it" has to say so on the slide. */
   citation: 'cited' | 'verified' | 'recalled' | 'none';
   cycleCount: number;
+  /** What the corpus actually knows about this province. A model title and a
+   *  completeness grade meant nothing to the room; a field count and a
+   *  discovery span mean something to everyone in it. */
+  facts: {
+    fields: number;
+    discovered: number;        // MMBOE, summed over fields with a filed volume
+    assessed: number;          // MMBOE, USGS mean undiscovered
+    firstYear: number | null;
+    lastYear: number | null;
+  };
+  /** Oldest → youngest bound of the bars that actually exist, so the chart can
+   *  open on its data instead of on 250 Ma of empty Triassic. Null when the
+   *  model has no timed bar at all. */
+  dataSpan: [number, number] | null;
 }
 
 /** Cycles belonging to any basin in this province, oldest first. */
@@ -112,14 +127,93 @@ export function basinDossier(code: string): Promise<BasinDossier | null> {
       if (citation === 'none' || CITATION_RANK[s] < CITATION_RANK[citation]) citation = s;
     }
 
+    // The extent of every drawn bar. EventsChart.span is the TIMESCALE bound,
+    // not the data bound — opening on it is what left the Paleogene bars
+    // squeezed into the right-hand tenth of the frame.
+    let oldest = -Infinity, youngest = Infinity;
+    for (const row of events?.rows ?? []) {
+      for (const bar of row.bars) {
+        if (Number.isFinite(bar.from)) oldest = Math.max(oldest, bar.from);
+        if (Number.isFinite(bar.to)) youngest = Math.min(youngest, bar.to);
+      }
+    }
+    let dataSpan: [number, number] | null = null;
+    if (Number.isFinite(oldest) && Number.isFinite(youngest) && oldest > youngest) {
+      // A tenth of the range as breathing room on the old side, so the first
+      // bar does not start hard against the axis.
+      const pad = Math.max(2, (oldest - youngest) * 0.12);
+      dataSpan = [oldest + pad, Math.max(0, youngest - pad * 0.4)];
+    }
+
+    const stat = (await provinceStats()).find((p) => p.code === code);
+
     return {
       code, provinceName: province.name ?? code,
       events, tecto: { periods, cycles, elements },
       modelTitle: model?.title, grade: model?.completeness_grade,
       citation, cycleCount: cycles.length,
+      facts: {
+        fields: stat?.fieldCount ?? 0,
+        discovered: stat?.discovered ?? 0,
+        assessed: stat?.boeMean ?? 0,
+        firstYear: stat?.firstYear ?? null,
+        lastYear: stat?.lastYear ?? null,
+      },
+      dataSpan,
     };
   })();
 
   cache.set(code, run);
+  return run;
+}
+
+/* ── the third wedge: field analogues ────────────────────────────────────────
+   What a basin's fields actually ARE — who operates them, what they produce,
+   how far along they are. Read from cockpit-field-detail.json, which carries
+   real GOGET attributes per field; nothing here is modelled. */
+
+export interface Tally { label: string; n: number }
+export interface FieldAnalogue {
+  fields: number;
+  fluid: Tally[];       // oil and gas / gas / oil
+  status: Tally[];      // operating / in-development / discovered
+  operators: Tally[];   // most active first
+}
+
+const rank = (m: Map<string, number>): Tally[] =>
+  [...m.entries()].map(([label, n]) => ({ label, n })).sort((a, b) => b.n - a.n);
+
+let analogCache: Map<string, Promise<FieldAnalogue>> | null = null;
+
+export function fieldAnalogue(code: string): Promise<FieldAnalogue> {
+  analogCache ??= new Map();
+  const hit = analogCache.get(code);
+  if (hit) return hit;
+
+  const run = (async (): Promise<FieldAnalogue> => {
+    const [scope, detail] = await Promise.all([loadScopeFields(), loadFieldDetail()]);
+    const fluid = new Map<string, number>();
+    const status = new Map<string, number>();
+    const ops = new Map<string, number>();
+    const list = scope.provinces[code] ?? [];
+    for (const f of list) {
+      const d = detail[f.id];
+      if (!d) continue;
+      const bump = (m: Map<string, number>, v?: string | null) => {
+        if (v) m.set(v, (m.get(v) ?? 0) + 1);
+      };
+      bump(fluid, d.fuelType);
+      bump(status, d.status);
+      bump(ops, (d as { operator?: string }).operator);
+    }
+    return {
+      fields: list.length,
+      fluid: rank(fluid),
+      status: rank(status),
+      operators: rank(ops).slice(0, 5),
+    };
+  })();
+
+  analogCache.set(code, run);
   return run;
 }
