@@ -133,7 +133,17 @@ export async function runTurn(
       tools: toProviderTools(offered),
       callModel,
       executeTool,
-      maxSteps: options.maxSteps ?? 4,
+      // TWO, not four.
+      //
+      // The card IS the answer here: it is built by the deterministic pipeline
+      // from local files, and the model's prose is discarded by the grounding
+      // guard almost every time. So once a tool has run we already hold the
+      // answer, and every further round-trip buys words nobody sees while the
+      // user waits. Traces showed four model calls per question at ~14s total.
+      //
+      // Two rather than one, because a genuine two-step does exist -- resolve,
+      // then drill into what came back -- and cutting to one would break it.
+      maxSteps: options.maxSteps ?? 2,
       autonomyLevel: AUTONOMY.ON_DEMAND,
       budget: missionBudget({}),
       onTrail: options.onTrail,

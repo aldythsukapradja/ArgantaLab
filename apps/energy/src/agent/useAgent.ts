@@ -138,15 +138,28 @@ export function useAgent(): UseAgent {
         // a number-free summary — it never sees a figure it could restate wrong.
         let produced: AnswerCard | null = null;
         let producedResult: ReturnType<typeof runIntent> | null = null;
+        // Identical calls within one turn are answered from what already ran.
+        //
+        // Not merely an optimisation. Traces showed the model calling
+        // basin_figures three times for one question, and runIntent DISPATCHES
+        // COMMANDS -- so the map flew three times and the scope was set three
+        // times for a single answer. Replaying a side effect because the model
+        // repeated itself is a correctness bug wearing a performance costume.
+        const seen = new Map<string, unknown>();
         const executeTool = async (name: string, args: Record<string, unknown>) => {
           if (!TOOL_NAMES.has(name)) return { error: 'no such tool' };
+          const key = `${name}:${JSON.stringify(args)}`;
+          const already = seen.get(key);
+          if (already !== undefined) return already;
           const result = runIntent(index, turnRef.current, toolCallToIntent(name, args), text, scope);
           turnRef.current = result.turn;
           dispatch(result.commands);
           setBreadcrumb(ladderLabel(result.turn));
           produced = result.card;
           producedResult = result;
-          return { ok: true, summary: toolSummary(result.card) };
+          const reply = { ok: true, summary: toolSummary(result.card) };
+          seen.set(key, reply);
+          return reply;
         };
 
         // Bounded. On timeout this rejects, the catch below logs it, and the
