@@ -323,7 +323,7 @@ const s02api: SceneApi = {
 // well and core were a ladder for its own sake.
 const SCALES = [
   { name: 'Petroleum System', note: 'thirteen provinces, one framework' },
-  { name: 'Tectonostratigraphy', note: 'Kutei · 3817' },
+  { name: 'Tectonostratigraphy', note: 'Kutei Basin, East Kalimantan' },
   { name: 'Field Analog', note: 'one field, and its neighbours' },
   // The descent ends by reversing: everything it just looked at, joined.
   { name: 'Unified Indonesian Petroleum Geology', note: 'one knowledge base' },
@@ -366,9 +366,12 @@ function S04() {
           </div>
         </header>
 
-        <div className="kn-descent-pair">
+        {/* The last stop has no card. It is the zoom-OUT — the whole point is
+            that everything joins — and a panel of Kutei detail beside it would
+            be arguing the opposite. The lens takes the frame alone. */}
+        <div className={'kn-descent-pair' + (at === SCALES.length - 1 ? ' solo' : '')}>
           <BasinLens depth={depth} />
-          <Wedges stop={at} />
+          {at < SCALES.length - 1 && <Wedges stop={at} />}
         </div>
       </div>
     </section>

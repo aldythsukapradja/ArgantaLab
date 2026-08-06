@@ -203,6 +203,45 @@ export function BasinLens({ depth }: { depth: number }) {
   const legs = 3;
   const woven = Math.max(0, Math.min(1, depth * legs - (legs - 1)));
 
+  // PERFORMANCE. The zoom-out used to stutter because every ring, link, arc and
+  // dot carried an attribute derived from `z` — strokeWidth, r, opacity — so
+  // ~220 SVG nodes were re-rendered and re-laid-out sixty times a second.
+  //
+  // Now: strokes use vector-effect="non-scaling-stroke", which keeps a hairline
+  // a hairline under any transform WITHOUT a per-frame attribute; arc opacity
+  // moved from each path onto their shared group, one update instead of
+  // seventy-eight; and the dot radius is quantised so it changes about twenty
+  // times across the whole descent rather than on every frame.
+  //
+  // What is left changing per frame is a single transform string on one <g>,
+  // which is what the GPU is for.
+  const zq = Math.max(0.5, Math.round(z * 3) / 3);
+
+  const shapes = useMemo(() => (
+    <>
+      {lens?.rings.map((r, i) => (
+        <path key={`r${i}`} d={r.d} className={'kn-lens-ring' + (r.kutei ? ' on' : '')} />
+      ))}
+      {/* Links under the dots, so a dot is never cut by its own edge. */}
+      {lens?.links.map((l, i) => (
+        <line key={`l${i}`} className="kn-lens-link"
+          x1={l.a.x} y1={l.a.y} x2={l.b.x} y2={l.b.y}
+          style={{ animationDelay: `${(i % 9) * 0.34}s` }} />
+      ))}
+    </>
+  ), [lens]);
+
+  const dots = useMemo(() => lens?.fields.map((f, i) => (
+    <circle key={`f${i}`} className={'kn-lens-field' + (f.kutei ? ' on' : '')}
+      cx={f.x} cy={f.y} r={f.r / Math.sqrt(zq)}
+      style={f.kutei ? { animationDelay: `${(i % 7) * 0.29}s` } : undefined} />
+  )), [lens, zq]);
+
+  const arcs = useMemo(() => lens?.arcs.map((d, i) => (
+    <path key={`a${i}`} className="kn-lens-arc" d={d}
+      style={{ animationDelay: `${(i % 11) * 0.21}s` }} />
+  )), [lens]);
+
   return (
     <div className="kn-lens" aria-hidden>
       <svg viewBox={`0 0 ${VB} ${VB}`}>
@@ -223,34 +262,11 @@ export function BasinLens({ depth }: { depth: number }) {
             transform: `translate(${VB / 2}px, ${VB / 2}px) scale(${z}) translate(${-x}px, ${-y}px)`,
             transformOrigin: '0 0',
           }}>
-            {lens?.rings.map((r, i) => (
-              <path key={i} d={r.d}
-                className={'kn-lens-ring' + (r.kutei ? ' on' : '')}
-                /* Divided by the zoom so an outline stays a hairline instead of
-                   thickening into a slab as the lens descends. */
-                strokeWidth={(r.kutei ? 0.7 : 0.4) / z} />
-            ))}
-            {/* The weave: every province joined to every other, on the last
-                leg only. Drawn first so it sits beneath the outlines. */}
-            {woven > 0 && lens?.arcs.map((d, i) => (
-              <path key={`a${i}`} className="kn-lens-arc" d={d}
-                strokeWidth={0.3 / z}
-                style={{ opacity: woven * 0.5, animationDelay: `${(i % 11) * 0.21}s` }} />
-            ))}
-            {/* Links under the dots, so a dot is never cut by its own edge. */}
-            {lens?.links.map((l, i) => (
-              <line key={`l${i}`} className="kn-lens-link"
-                x1={l.a.x} y1={l.a.y} x2={l.b.x} y2={l.b.y}
-                strokeWidth={0.28 / z}
-                /* Staggered so the network pulses along its edges rather than
-                   blinking as one block. */
-                style={{ animationDelay: `${(i % 9) * 0.34}s` }} />
-            ))}
-            {lens?.fields.map((f, i) => (
-              <circle key={i} className={'kn-lens-field' + (f.kutei ? ' on' : '')}
-                cx={f.x} cy={f.y} r={f.r / Math.sqrt(z)}
-                style={f.kutei ? { animationDelay: `${(i % 7) * 0.29}s` } : undefined} />
-            ))}
+            {/* The weave: every province joined to every other, on the last leg
+                only. One opacity on the group, not one per arc. */}
+            {woven > 0 && <g style={{ opacity: woven * 0.62 }}>{arcs}</g>}
+            {shapes}
+            {dots}
           </g>
         </g>
 

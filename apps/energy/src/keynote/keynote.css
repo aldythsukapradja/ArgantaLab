@@ -366,10 +366,11 @@
   z-index:1;pointer-events:none;
   filter:drop-shadow(0 0 60px color-mix(in srgb,var(--technology) 26%,transparent))}
 .kn-lens svg{width:100%;height:100%;display:block;overflow:visible}
-.kn-lens-ring{fill:none;stroke:color-mix(in srgb,var(--technology) 42%,transparent)}
+.kn-lens-ring{fill:none;stroke:color-mix(in srgb,var(--technology) 38%,transparent);
+  stroke-width:.7px;vector-effect:non-scaling-stroke}
 /* Kutei is the subject of the descent, so it is the only lit outline. */
 .kn-lens-ring.on{fill:color-mix(in srgb,var(--technology) 12%,transparent);
-  stroke:var(--technology)}
+  stroke:var(--technology);stroke-width:1.3px}
 .kn-lens-field{fill:color-mix(in srgb,var(--geology) 45%,transparent)}
 /* Kutei's fields breathe, and the edges between them carry a travelling pulse:
    a basin is one connected system, not a scatter of dots, and that is the
@@ -380,15 +381,18 @@
   animation:kn-field-pulse 3.4s ease-in-out infinite}
 @keyframes kn-field-pulse{0%,100%{opacity:.55}50%{opacity:1}}
 .kn-lens-link{stroke:var(--technology);stroke-linecap:round;opacity:.3;
+  stroke-width:.5px;vector-effect:non-scaling-stroke;
   animation:kn-link-pulse 3.4s ease-in-out infinite}
 @keyframes kn-link-pulse{0%,100%{opacity:.14}50%{opacity:.55}}
 @media (prefers-reduced-motion:reduce){
   .kn-lens-field.on,.kn-lens-link{animation:none}
 }
-.kn-lens-arc{fill:none;stroke:var(--technology);stroke-linecap:round;
+.kn-lens-arc{fill:none;stroke:var(--geology);stroke-linecap:round;
+  stroke-width:.9px;vector-effect:non-scaling-stroke;
   animation:kn-link-pulse 4.2s ease-in-out infinite;
-  filter:drop-shadow(0 0 2px color-mix(in srgb,var(--technology) 60%,transparent))}
-.kn-lens-rim{fill:none;stroke:color-mix(in srgb,var(--technology) 45%,transparent);stroke-width:.35}
+  filter:drop-shadow(0 0 3px color-mix(in srgb,var(--geology) 70%,transparent))}
+.kn-lens-rim{fill:none;stroke:color-mix(in srgb,var(--technology) 45%,transparent);
+  stroke-width:1px;vector-effect:non-scaling-stroke}
 .kn-lens-cross line{stroke:color-mix(in srgb,var(--technology) 60%,transparent);stroke-width:.35}
 /* A ground behind the type so a lit outline never runs through a word. */
 
@@ -403,6 +407,9 @@
   align-items:center;gap:calc(var(--gap)*1.8);width:100%;padding:0 var(--pad)}
 .kn-descent-head{text-align:center;display:flex;flex-direction:column;align-items:center}
 .kn-descent-head .kn-eyebrow{margin-bottom:calc(var(--gap)*1.1)}
+/* Solo: the unified stop shows the lens alone, and larger — it is the payoff. */
+.kn-descent-pair.solo{grid-template-columns:min(58vh,44vw)}
+.kn-descent-pair.solo .kn-lens{width:min(58vh,44vw)}
 .kn-descent-pair{display:grid;grid-template-columns:repeat(2,var(--kn-panel));
   gap:calc(var(--gap)*2);align-items:stretch;justify-content:center}
 

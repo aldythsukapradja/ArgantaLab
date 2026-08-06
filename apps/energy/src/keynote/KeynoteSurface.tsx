@@ -29,6 +29,27 @@ export function KeynoteSurface({ onExit, startDark = true }: {
   const stageRef = useRef<HTMLDivElement>(null);
   const scene = SCENES[index];
 
+  // FORCE THE APP INTO DARK while the deck is open.
+  //
+  // The deck portals to <body>, so it sits inside the running app — and the app
+  // boots light. Everything the deck borrows keys off the shell's theme the way
+  // the Cockpit's own toggle does: `html.dark` plus `data-theme`. Setting the
+  // sky and re-declaring tokens fixed those surfaces one at a time and kept
+  // missing others, because the real switch is one level up. This is the
+  // Cockpit's own dark mode, turned on for the duration and restored on exit.
+  useEffect(() => {
+    const html = document.documentElement;
+    const hadDark = html.classList.contains('dark');
+    const prevTheme = html.getAttribute('data-theme');
+    html.classList.add('dark');
+    html.setAttribute('data-theme', 'dark');
+    return () => {
+      if (!hadDark) html.classList.remove('dark');
+      if (prevTheme) html.setAttribute('data-theme', prevTheme);
+      else html.removeAttribute('data-theme');
+    };
+  }, []);
+
   // Elapsed timer — a presenter needs to know, and it costs one interval.
   useEffect(() => {
     const t = setInterval(() => setElapsed((s) => s + 1), 1000);

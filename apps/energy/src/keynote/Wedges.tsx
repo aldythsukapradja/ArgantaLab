@@ -91,7 +91,7 @@ export function Wedges({ stop }: { stop: number }) {
   return (
     <aside className="kn-wedges" aria-hidden>
       <header>
-        <span className="kn-wedge-scope">Kutei · 3817</span>
+        <span className="kn-wedge-scope">Kutei Basin, East Kalimantan</span>
         <span className="kn-wedge-count">{a ? `${a.fields} fields` : ''}</span>
       </header>
 

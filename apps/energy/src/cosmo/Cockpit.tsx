@@ -65,6 +65,14 @@ const PLACES: Place[] = [
   VOLVE,
 ];
 
+/** Where the keynote demo opens. Centre and zoom match the deck's own
+ *  archipelago framing (keynote/KeynoteMap.tsx INDONESIA) so the embedded app
+ *  and the slide behind it are looking at the same place. */
+const INDONESIA_VIEW: Place = {
+  id: 'indonesia', name: 'Indonesia', kind: 'Region',
+  parent: '13 petroleum provinces', lon: 118.5, lat: -1.6, zoom: 3.9,
+};
+
 const THEMES: Array<{ id: ThemeId; name: string; icon: typeof Globe2 }> = [
   { id: 'satellite', name: 'Satellite', icon: Globe2 },
   { id: 'openmap', name: 'Open Map', icon: Map },
@@ -88,7 +96,14 @@ export function Cockpit({ dark, onNavigate, zoomVolveSignal }: {
 }) {
   const [mode, setMode] = useState<Mode>('3d');
   const [theme, setTheme] = useState<ThemeId>('satellite');
-  const [place, setPlace] = useState<Place>(PLACES[0]);
+  // The keynote embeds this in an iframe on the Phase One slide, and that deck
+  // is about Indonesia — opening on the global view (which settles over Europe
+  // and the North Sea) puts the wrong hemisphere on the wall. Only the demo is
+  // affected; the app itself still opens global.
+  const [place, setPlace] = useState<Place>(
+    () => (typeof window !== 'undefined'
+      && new URLSearchParams(window.location.search).has('keynote-demo')
+      ? INDONESIA_VIEW : PLACES[0]));
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [selection, setSelection] = useState<CockpitSelection | null>(null);
