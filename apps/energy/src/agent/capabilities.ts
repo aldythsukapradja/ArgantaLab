@@ -109,6 +109,12 @@ function alsoAvailable(node: GazIndexed, exclude: string, limit = 4): CardChip[]
 const kbBasinId = (node: GazIndexed): string | undefined =>
   (node.nativeIds ?? []).find((id) => id.startsWith('atlas:basin:'));
 
+/** The PROVINCE id, which is what the petroleum-system rows are keyed on.
+ *  Same node, different native id — the basin and province tiers are one place
+ *  in this data and both ids are retained deliberately. */
+const kbProvinceId = (node: GazIndexed): string | undefined =>
+  (node.nativeIds ?? []).find((id) => id.startsWith('atlas:province:'));
+
 /** Set scope at the level this node fills, letting the brain fill ancestors. */
 function scopeTo(node: GazIndexed): AgentCommand[] {
   const level = levelForKind(node.kind);
@@ -414,6 +420,11 @@ export const CAPABILITIES: Capability[] = [
         })),
         chips: nodeChips(systems, 8).length ? nodeChips(systems, 8) : alsoAvailable(n, ''),
         provenance: prov(n),
+      // The events chart, in the answer. Gated on a province id existing --
+      // without it there is nothing to join the psEvent rows against.
+      ...(kbProvinceId(n) ? {
+        artifact: { component: 'basin-events', props: { provinceId: kbProvinceId(n), name: n.name } },
+      } : {})
       };
     },
   },

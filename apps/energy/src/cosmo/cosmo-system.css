@@ -1353,3 +1353,41 @@ html[data-ui="cosmo"] .app.rail-pinned .rail-btn{margin-left:0}
 }
 .ca-fig-examine:hover{ background:rgba(14,165,233,.18); }
 .dark .ca-fig-examine{ color:#7dd3fc; }
+
+/* ── petroleum-system events chart ──────────────────────────────────────────
+   Time runs oldest LEFT to present RIGHT — the convention every events chart
+   uses. Reversing it to match a normal number line would read as wrong to
+   anyone who has seen one before. */
+.ca-events{ padding:10px 11px 11px; }
+.ca-ev-sub{ font-size:11px; color:var(--ink-dim,#6b7280); margin-bottom:9px; }
+.ca-ev-rows{ display:flex; flex-direction:column; gap:3px; }
+.ca-ev-row{ display:grid; grid-template-columns:104px 1fr; align-items:center; gap:9px; }
+.ca-ev-label{ font-size:10.5px; color:var(--ink-dim,#6b7280); text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ca-ev-track{ position:relative; height:13px; border-radius:3px; background:rgba(127,127,127,.09); }
+.ca-ev-bar{ position:absolute; top:2px; height:9px; border-radius:2px; min-width:2px; }
+.ca-ev-bar.is-modelled{ background:#0ea5e9; }
+/* Hatched, not just a different hue: derived-by-rule is a weaker claim than
+   modelled and should not read as the same kind of statement. */
+.ca-ev-bar.is-derived{
+  background:repeating-linear-gradient(45deg,#94a3b8 0 3px,transparent 3px 6px);
+  outline:1px solid rgba(148,163,184,.55); outline-offset:-1px;
+}
+.ca-ev-crit{ position:absolute; top:-1px; width:1.5px; height:15px; background:#dc2626; }
+.ca-ev-axis{
+  display:flex; justify-content:space-between; margin:6px 0 0 113px;
+  font-size:9.5px; color:var(--ink-dim,#6b7280); font-variant-numeric:tabular-nums;
+}
+.ca-ev-key{
+  display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:9px; padding-top:9px;
+  border-top:1px solid rgba(127,127,127,.14); font-size:10px; color:var(--ink-dim,#6b7280);
+}
+.ca-ev-key span{ display:inline-flex; align-items:center; gap:5px; }
+.ca-ev-key i{ width:14px; height:7px; border-radius:2px; }
+.ca-ev-key i.is-modelled{ background:#0ea5e9; }
+.ca-ev-key i.is-derived{ background:repeating-linear-gradient(45deg,#94a3b8 0 3px,transparent 3px 6px); outline:1px solid rgba(148,163,184,.55); outline-offset:-1px; }
+.ca-ev-key b{ width:1.5px; height:11px; background:#dc2626; }
+.ca-ev-key em{ font-style:normal; opacity:.85; }
+@media (max-width:640px){
+  .ca-ev-row{ grid-template-columns:78px 1fr; gap:6px; }
+  .ca-ev-axis{ margin-left:84px; }
+}

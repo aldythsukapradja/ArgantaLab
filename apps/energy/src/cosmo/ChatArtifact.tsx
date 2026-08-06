@@ -349,6 +349,100 @@ function WellLogs({ well }: { well: string }) {
   );
 }
 
+// ── petroleum-system events ──────────────────────────────────────────────────
+
+interface PsEvent {
+  event_id: string; model_id: string; event_type: string; label?: string;
+  start_ma?: number; end_ma?: number; event_status?: string; certainty?: string;
+}
+
+/** Magoon & Dow order. A events chart read in any other sequence is just bars. */
+const EVENT_ORDER = [
+  'deposition', 'source-rock', 'reservoir', 'seal', 'overburden',
+  'trap-formation', 'generation', 'expulsion', 'migration', 'accumulation',
+  'preservation', 'critical-moment',
+];
+const eventRank = (t: string) => {
+  const i = EVENT_ORDER.indexOf(t);
+  return i < 0 ? EVENT_ORDER.length : i;
+};
+
+function PsEvents({ provinceId, name }: { provinceId: string; name?: string }) {
+  const [spine, setSpine] = useState<any>(spineCache);
+  useEffect(() => {
+    let alive = true;
+    loadSpine().then((sp) => { if (alive) setSpine(sp); });
+    return () => { alive = false; };
+  }, []);
+
+  const chart = useMemo(() => {
+    if (!spine?.psEvent) return null;
+    const systems = (spine.petroleumSystem ?? []).filter((p: any) => p.province_id === provinceId);
+    if (!systems.length) return null;
+    const models = (spine.psModel ?? []).filter((m: any) => systems.some((p: any) => p.tps_id === m.tps_id));
+    const events: PsEvent[] = (spine.psEvent ?? [])
+      .filter((e: PsEvent) => models.some((m: any) => m.model_id === e.model_id))
+      .filter((e: PsEvent) => Number.isFinite(e.start_ma) && Number.isFinite(e.end_ma));
+    if (!events.length) return null;
+
+    const oldest = Math.max(...events.map((e) => Math.max(e.start_ma!, e.end_ma!)));
+    const critical = events.find((e) => e.event_type === 'critical-moment');
+    const bars = events
+      .filter((e) => e.event_type !== 'critical-moment')
+      .sort((a, b) => eventRank(a.event_type) - eventRank(b.event_type));
+    return { systems, bars, critical, oldest: Math.ceil(oldest / 50) * 50 || 100 };
+  }, [spine, provinceId]);
+
+  if (!spine) return <div className="ca-loading">Loading the petroleum-system model…</div>;
+  if (!chart) return <div className="ca-empty">No modelled petroleum-system events for {name ?? 'this basin'}.</div>;
+
+  // Time runs oldest LEFT to present RIGHT, the convention every events chart
+  // uses. Reversing it to match a normal number line would read as wrong to
+  // anyone who has seen one before.
+  const x = (ma: number) => 100 - (ma / chart.oldest) * 100;
+  const derived = chart.bars.filter((b) => b.event_status !== 'modelled').length;
+
+  return (
+    <div className="ca-events">
+      <div className="ca-ev-sub">{chart.systems.map((s: any) => s.name).join(' · ')}</div>
+      <div className="ca-ev-rows">
+        {chart.bars.map((e) => {
+          const lo = Math.min(e.start_ma!, e.end_ma!);
+          const hi = Math.max(e.start_ma!, e.end_ma!);
+          const left = x(hi);
+          const width = Math.max(x(lo) - x(hi), 1.2);
+          return (
+            <div className="ca-ev-row" key={e.event_id}>
+              <span className="ca-ev-label">{e.label ?? e.event_type}</span>
+              <span className="ca-ev-track">
+                <i
+                  className={'ca-ev-bar' + (e.event_status === 'modelled' ? ' is-modelled' : ' is-derived')}
+                  style={{ left: `${left}%`, width: `${width}%` }}
+                  title={`${hi}–${lo} Ma · ${e.event_status ?? 'unknown status'} · certainty ${e.certainty ?? 'unstated'}`}
+                />
+                {chart.critical?.start_ma != null && (
+                  <b className="ca-ev-crit" style={{ left: `${x(chart.critical.start_ma)}%` }} />
+                )}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="ca-ev-axis">
+        <span>{chart.oldest} Ma</span><span>present</span>
+      </div>
+      <div className="ca-ev-key">
+        <span><i className="is-modelled" /> modelled</span>
+        <span><i className="is-derived" /> derived by rule</span>
+        {chart.critical && <span><b /> critical moment</span>}
+        {/* Said out loud, because a chart makes everything on it look equally
+            measured. Over half of these bars are usually rule-derived. */}
+        {derived > 0 && <em>{derived} of {chart.bars.length} bars are rule-derived, not modelled</em>}
+      </div>
+    </div>
+  );
+}
+
 // ── the host ─────────────────────────────────────────────────────────────────
 
 export interface ChatArtifactProps {
@@ -368,6 +462,11 @@ export function ChatArtifact({ component, props, onExamine }: ChatArtifactProps)
         const entityId = str(props.entityId);
         if (!entityId) return null;
         return <BasinFigures entityId={entityId} name={str(props.name)} onExamine={onExamine} />;
+      }
+      case 'basin-events': {
+        const provinceId = str(props.provinceId);
+        if (!provinceId) return null;
+        return <PsEvents provinceId={provinceId} name={str(props.name)} />;
       }
       case 'well-logs': {
         const well = str(props.well);
