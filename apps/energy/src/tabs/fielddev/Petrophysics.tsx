@@ -33,7 +33,7 @@ import { PetroLogBench } from './PetroLogBench';
 import { PetroZoneStrip } from './PetroZoneStrip';
 import { PetroCrossplot2D, type Template } from './PetroCrossplot2D';
 import { PetroCrossplot3D } from './PetroCrossplot3D';
-import { usePetroCloud } from './petro-cloud';
+import { useFieldCurves, toBoreCurves } from './petro-curves';
 import { PetroZonationMatrix } from './PetroZonationMatrix';
 import { PetroCorrelationPanel } from './PetroCorrelationPanel';
 import { PetroCorrelationMap } from './PetroCorrelationMap';
@@ -244,9 +244,18 @@ export function Petrophysics({ field }: { field: SearchEntry }) {
   // from the bench to a crossplot never silently reverts an interpretation.
   const [params, setParams] = useState<PetroParams>(DEFAULT_PARAMS);
   const [template, setTemplate] = useState<Template>('denneu');
-  // Decoded only while Analytics is showing: a 24-bore log decode is not
-  // something to pay for on a pane that does not plot it.
-  const cloud = usePetroCloud(ws, pane === 'analytics');
+  /**
+   * ONE decode for the whole Analytics pane.
+   *
+   * Decoded only while Analytics is showing — a 24-bore log decode is not
+   * something to pay for on a pane that does not plot it — and decoded ONCE.
+   * It used to be twice: petro-cloud read every digest for the 2D plots and
+   * useFieldCurves read the same digests again for the 3D, so the pane paid for
+   * two full gunzip-and-parse passes over the delivery before drawing anything.
+   * The 3D reader's output is a superset, so the 2D projects out of it.
+   */
+  const analytics = useFieldCurves(ws, params, pane === 'analytics');
+  const cloudBores = useMemo(() => analytics.bores.map(toBoreCurves), [analytics.bores]);
   /** the delivery's own free-water level, for the saturation-height template */
   const contactDepth = useMemo(() => {
     const c = ws.contacts.find((x) => /owc|gwc|goc/i.test(String(x.kind)));
@@ -373,19 +382,19 @@ export function Petrophysics({ field }: { field: SearchEntry }) {
         ) : (
           pane === 'analytics' ? (
             <>
-              {/* Both plots are REAL now, and at 50/50 — the 2D reads the ingested
-                  logs through petro-cloud, the 3D reads OUR field interpretation
-                  through petro-curves and colours by the net flag it produces. */}
+              {/* Both plots are REAL and at 50/50, and they read ONE decode of the
+                  delivery: the 2D projects the delivered curves out of the same
+                  BoreCurveSet the 3D colours by our net flag. */}
               <section className="pps-region live" style={{ gridArea: 'main' }}>
                 <PetroCrossplot2D
-                  bores={cloud.bores}
+                  bores={cloudBores}
                   contactDepth={contactDepth}
                   archie={{ a: params.a, m: params.m, n: params.n, rw: params.rw }}
                   template={template}
                   onTemplate={setTemplate}
                 />
               </section>
-              <PetroCrossplot3D ws={ws} params={params} enabled={pane === 'analytics'} />
+              <PetroCrossplot3D curves={analytics} />
             </>
           ) : pane === 'correlation' ? (
             <>

@@ -22,6 +22,7 @@ import { runPetro, type PetroParams } from './petro-compute';
 import { dedupePicks } from './workspace-model';
 import { wellKey } from './well-paths';
 import type { Workspace, WorkspaceBore } from './workspace';
+import type { BoreCurves } from './petro-xplot';
 import type { WellRole } from '../../dataqc/curate';
 
 export interface BoreCurveSet {
@@ -73,6 +74,25 @@ export interface FieldCurves {
 
 const EMPTY: FieldCurves = { bores: [], done: 0, total: 0, running: false, skipped: [] };
 
+/**
+ * A BoreCurveSet seen as the crossplots' `BoreCurves`.
+ *
+ * This is the whole reason petro-cloud is gone. Analytics used to mount TWO
+ * readers over the same twenty-four log digests — one for the 2D plots, one for
+ * the 3D — so opening the pane gunzipped and parsed every log twice before it
+ * drew anything. The 3D reader already produces a superset: `raw` is exactly
+ * what petro-cloud built (family-keyed, first writer wins, depth in metres),
+ * plus the interpretation the 3D colours by.
+ *
+ * DELIVERED CURVES ONLY, deliberately. Our PHIE/Sw/Vsh are not injected under
+ * the delivered names: the 2D templates fit against what the delivery shipped —
+ * the permeability law reads PERM against PHIE — and quietly swapping in our
+ * curve would change what those fits mean without changing what they say.
+ */
+export function toBoreCurves(b: BoreCurveSet): BoreCurves {
+  return { well: b.well, depth: b.md, depthKind: 'md', curves: b.raw };
+}
+
 /** Every curve keyed by family, first writer wins — a family-resolved curve
  *  beats a raw mnemonic, the same precedence petro-cloud uses. */
 function rawByFamily(
@@ -104,6 +124,27 @@ export function useFieldCurves(ws: Workspace, params: PetroParams, enabled: bool
     (async () => {
       const bores: BoreCurveSet[] = [];
       const skipped: FieldCurves['skipped'] = [];
+      /**
+       * PUBLISH RATE, and it is the difference between this pane loading and
+       * this pane crawling.
+       *
+       * Emitting a new `bores` array after every bore looks like the
+       * considerate thing to do — the panel fills in as the delivery lands. But
+       * every emission is a new array identity, so every consumer's memo
+       * recomputes over the WHOLE accumulated set: 24 emissions means the 3D
+       * cloud is built 24 times, the 2D cloud resampled and re-rasterised 24
+       * times, and the correlation model rebuilt 24 times, each over a larger
+       * set than the last. That is quadratic work to display a result that is
+       * only correct at the end.
+       *
+       * So progress counters still tick every bore — the reader can see it
+       * working — but the PAYLOAD is published at most every 400 ms, and always
+       * on the final bore. Between publishes the previous array is handed back
+       * BY REFERENCE, which is what keeps the consumers' memos from firing.
+       */
+      const PUBLISH_MS = 400;
+      let published: BoreCurveSet[] = [];
+      let lastPublish = 0;
 
       for (let i = 0; i < logged.length; i++) {
         if (cancelled || runRef.current !== run) return;
@@ -156,15 +197,28 @@ export function useFieldCurves(ws: Workspace, params: PetroParams, enabled: bool
         } catch {
           skipped.push({ well: bore.name, why: 'log digest could not be decoded' });
         }
-        // emit progressively and yield, so 24 bores do not freeze the pane
+        // emit progressively and yield, so 24 bores do not freeze the pane —
+        // but see PUBLISH_MS: the payload is throttled, the counter is not
+        const now = performance.now();
+        const last = i === logged.length - 1;
+        if (last || now - lastPublish >= PUBLISH_MS) {
+          published = [...bores];
+          lastPublish = now;
+        }
         setState({
-          bores: [...bores], done: i + 1, total: logged.length, running: true, skipped: [...skipped],
+          bores: published, done: i + 1, total: logged.length, running: true, skipped: [...skipped],
         });
         await new Promise((r) => { setTimeout(r, 0); });
       }
 
       if (!cancelled && runRef.current === run) {
-        setState({ bores, done: logged.length, total: logged.length, running: false, skipped });
+        // The final state reuses `published` when the last loop iteration already
+        // published it — a fresh array here would cost one more full recompute
+        // of every consumer for an identical result.
+        setState({
+          bores: published.length === bores.length ? published : bores,
+          done: logged.length, total: logged.length, running: false, skipped,
+        });
       }
     })().catch(() => { if (!cancelled) setState(EMPTY); });
 

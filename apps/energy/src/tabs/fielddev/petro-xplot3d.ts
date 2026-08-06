@@ -168,16 +168,21 @@ const EMPTY = (): Cloud3D => ({
  * and none of the reservoir.
  */
 /**
- * 25k, not 120k.
+ * 10k, down from 120k.
  *
- * The cap was set by what a GPU can hold, which is the wrong question — the
- * right one is what a HUMAN can read while orbiting at 60 fps. Past roughly
- * 25,000 points a field cloud is already saturated: the extra samples land on
- * pixels that are opaque anyway, so they add render cost and buffer churn while
- * adding no shape. Every frame rebuilds a filtered buffer when a legend toggles,
- * and that cost is linear in this number.
+ * The original cap answered "what can a GPU hold", which is the wrong question.
+ * The right one is what a HUMAN can read while orbiting — and a field cloud
+ * saturates long before ten thousand points: past that, samples land on pixels
+ * that are already opaque, so they buy render cost, buffer churn on every
+ * legend toggle, and no shape at all.
+ *
+ * At 10k the cloud still shows every mode and every tail the 25k version did —
+ * an even stride over ~170,000 screened samples is a 1-in-17 sample of a
+ * distribution, which is a very good estimate of that distribution. What it
+ * cannot show is an isolated one-off sample, and an isolated sample is not
+ * something anyone should be reading off a 3D scatter anyway.
  */
-export const MAX_POINTS = 25_000;
+export const MAX_POINTS = 10_000;
 
 export function buildCloud3D(
   bores: BoreCurveSet[], preset: Preset3, cap = MAX_POINTS,

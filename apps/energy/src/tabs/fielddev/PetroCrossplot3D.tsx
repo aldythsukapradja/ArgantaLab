@@ -18,9 +18,7 @@ import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { Box, AlertTriangle, RotateCcw } from 'lucide-react';
 import { cssVar } from './hooks';
-import type { Workspace } from './workspace';
-import type { PetroParams } from './petro-compute';
-import { useFieldCurves } from './petro-curves';
+import type { FieldCurves } from './petro-curves';
 import { PRESETS_3D, buildCloud3D, axisTicks, type Preset3, type Cloud3D } from './petro-xplot3d';
 
 /** Axis colours match the frame lines, so a label is findable without reading it. */
@@ -141,9 +139,7 @@ function AxisLabels({ preset, cloud }: { preset: Preset3; cloud: Cloud3D }) {
   );
 }
 
-export function PetroCrossplot3D({ ws, params, enabled }: {
-  ws: Workspace; params: PetroParams; enabled: boolean;
-}) {
+export function PetroCrossplot3D({ curves }: { curves: FieldCurves }) {
   const [presetId, setPresetId] = useState<Preset3['id']>('fluid');
   const [showPay, setShowPay] = useState(true);
   const [showNonPay, setShowNonPay] = useState(true);
@@ -151,9 +147,8 @@ export function PetroCrossplot3D({ ws, params, enabled }: {
   const theme = useSceneTheme();
 
   const preset = PRESETS_3D.find((p) => p.id === presetId) ?? PRESETS_3D[0];
-  // The SAME field interpretation the correlation panel draws — one decode, and
-  // the colour on this plot is the same net flag those tracks shade.
-  const curves = useFieldCurves(ws, params, enabled);
+  // The interpretation is handed IN, not read here: the pane decodes the
+  // delivery once and both plots project out of it.
   const cloud = useMemo(() => buildCloud3D(curves.bores, preset), [curves.bores, preset]);
 
   return (

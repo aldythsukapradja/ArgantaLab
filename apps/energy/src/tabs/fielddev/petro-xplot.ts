@@ -119,11 +119,14 @@ const real = isReal;
  *
  * Volve's twenty-four bores are ~170,000 screened samples, and the canvas pass
  * re-runs on every hover — one `fillRect` each, 170,000 times, for a hover
- * highlight. Past roughly 30,000 the cloud is saturated anyway: the extra
- * samples land on pixels that are already opaque at the alpha used, so they buy
- * render cost and no shape.
+ * highlight. The cloud is saturated long before that: the extra samples land on
+ * pixels already opaque at the alpha used, so they buy render cost and no shape.
+ *
+ * 15,000 is a 1-in-11 even stride over the delivery. The density structure a
+ * crossplot is read for survives that with room to spare; what does not survive
+ * is an isolated one-off sample, which is not something to read off a cloud.
  */
-export const MAX_CLOUD_POINTS = 30_000;
+export const MAX_CLOUD_POINTS = 15_000;
 
 /**
  * Even-stride thinning, deterministic.
