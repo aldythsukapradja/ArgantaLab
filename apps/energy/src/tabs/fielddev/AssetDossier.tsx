@@ -165,6 +165,8 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   // record is the context behind that. Falls back to the timeline when no monthly
   // series exists, which is the only case where Flow would be empty.
   const [chart, setChart] = useState<'timeline' | 'flow'>('flow');
+  /** the map key, folded into the identity card and closed by default */
+  const [mapKey, setMapKey] = useState(false);
   // the monthly flow picture — field-level bars plus the per-well series the
   // active-well count is derived from. Only a field with a deep bundle has these;
   // everything else keeps the calendar timeline and never offers the toggle.
@@ -227,7 +229,13 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   // toggle never appears rather than offering an empty chart.
   useEffect(() => {
     let alive = true;
-    setMonthly([]); setWellSeries([]); setChart('timeline'); setPvtRs(null);
+    // NOT setChart('timeline'). This reset ran on every field change and quietly
+    // overrode the pane's own default, so Flow was the declared default and
+    // Timeline was the one you always got. A field with no monthly series falls
+    // back to the timeline at RENDER time (see the chart branch below), which is
+    // the honest place for that fallback — the preference survives, the drawing
+    // adapts.
+    setMonthly([]); setWellSeries([]); setPvtRs(null);
     if (!record?.bundle) return;
     (async () => {
       const [idx, field] = await Promise.all([loadIndex().catch(() => null), loadProdField().catch(() => null)]);
@@ -700,44 +708,62 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
           {/* One dot per well, at the point that well cut THIS horizon — the
               correlation between the interpreted grid and the formation tops. */}
           <ImpactMarkers map={map} points={impacts} visible={!!horizonId} volumeUnit={wellGeo?.unit ?? ''} />
-          <div className="fds-ad-maplabel">
-            <b>{field.name}</b>
-            <span>{field.fly ? `${field.fly.lat.toFixed(3)}°, ${field.fly.lon.toFixed(3)}°` : 'location not reported'}</span>
-            {horizonId && (
-              <span className="fds-ad-mapnote">
-                {impacts.length
-                  ? `${impacts.length} well${impacts.length === 1 ? '' : 's'} penetrate this horizon`
-                  : (pickNote ?? 'no correlated tops')}
-              </span>
-            )}
-          </div>
-          {horizonId && (
-            <div className="fds-ad-mapkey">
-              {/* by well TYPE — what a well IS, not whether it flowed last month */}
-              <div><i className="k-oil" />oil producer</div>
-              <div><i className="k-wat" />water injector</div>
-              <div><i className="k-idle" />appraisal / exploration</div>
-              {contactOnThisHorizon && (
-                <div title={`${contactOnThisHorizon.nature} · ${contactOnThisHorizon.prov}`}>
-                  <i className="k-owc" />{contactOnThisHorizon.kind} {Math.round(contactOnThisHorizon.depth)} m
-                  {closure && ` · ${closure.km2.toFixed(1)} km²`}
-                </div>
-              )}
-              {outlineKm2 != null && (
-                <div title="The regulator's mapped productive area — the published hydrocarbon extent.">
-                  <i className="k-outline" />mapped outline {outlineKm2.toFixed(1)} km²
-                </div>
-              )}
-              {/* The blue line is a DEPTH contour, not an accumulation outline. Where
-                  the two disagree badly the reader is told, with the number, rather
-                  than left to assume the contour is the field. */}
-              {closure && outlineKm2 != null && closure.km2 > outlineKm2 * 1.5 && (
-                <div className="warn" title={`Contouring the contact across the whole mapped horizon gives the MAXIMUM closure — it ignores fault compartments, spill point and charge. The published outline is the accumulation.`}>
-                  contour is {(closure.km2 / outlineKm2).toFixed(1)}× the outline — max closure, not the HC extent
-                </div>
+          {/* ONE card on the map, not two.
+              The legend used to sit in the opposite corner as a permanent block of
+              text over the structure — six lines explaining symbols the reader
+              learns in one glance, covering the part of the grid they came to
+              look at. It is folded in here behind an (i), closed by default: the
+              identity is what you always want, the key is what you want once. */}
+          <div className={'fds-ad-maplabel' + (mapKey ? ' open' : '')}>
+            <div className="fds-ad-maplabel-head">
+              <div>
+                <b>{field.name}</b>
+                <span>{field.fly ? `${field.fly.lat.toFixed(3)}°, ${field.fly.lon.toFixed(3)}°` : 'location not reported'}</span>
+                {horizonId && (
+                  <span className="fds-ad-mapnote">
+                    {impacts.length
+                      ? `${impacts.length} well${impacts.length === 1 ? '' : 's'} penetrate this horizon`
+                      : (pickNote ?? 'no correlated tops')}
+                  </span>
+                )}
+              </div>
+              {horizonId && (
+                <button className={'fds-ad-mapi' + (mapKey ? ' on' : '')}
+                  onClick={() => setMapKey((v) => !v)}
+                  aria-expanded={mapKey}
+                  title={mapKey ? 'Hide the map key' : 'Symbols, contact and mapped outline'}>
+                  <Info size={11} />
+                </button>
               )}
             </div>
-          )}
+            {horizonId && mapKey && (
+              <div className="fds-ad-mapkey">
+                {/* by well TYPE — what a well IS, not whether it flowed last month */}
+                <div><i className="k-oil" />oil producer</div>
+                <div><i className="k-wat" />water injector</div>
+                <div><i className="k-idle" />appraisal / exploration</div>
+                {contactOnThisHorizon && (
+                  <div title={`${contactOnThisHorizon.nature} · ${contactOnThisHorizon.prov}`}>
+                    <i className="k-owc" />{contactOnThisHorizon.kind} {Math.round(contactOnThisHorizon.depth)} m
+                    {closure && ` · ${closure.km2.toFixed(1)} km²`}
+                  </div>
+                )}
+                {outlineKm2 != null && (
+                  <div title="The regulator's mapped productive area — the published hydrocarbon extent.">
+                    <i className="k-outline" />mapped outline {outlineKm2.toFixed(1)} km²
+                  </div>
+                )}
+                {/* The blue line is a DEPTH contour, not an accumulation outline. Where
+                    the two disagree badly the reader is told, with the number, rather
+                    than left to assume the contour is the field. */}
+                {closure && outlineKm2 != null && closure.km2 > outlineKm2 * 1.5 && (
+                  <div className="warn" title={`Contouring the contact across the whole mapped horizon gives the MAXIMUM closure — it ignores fault compartments, spill point and charge. The published outline is the accumulation.`}>
+                    contour is {(closure.km2 / outlineKm2).toFixed(1)}× the outline — max closure, not the HC extent
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           {horizonId && zRange && (
             <div className="fds-ad-zkey">
               <span>{Math.round(zRange.zmin)}</span>
@@ -841,7 +867,7 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
       <section className="fds-ad-timeline-panel">
         <div className="fds-ad-section-title">
           <Activity size={14} /><span>{chart === 'timeline' ? 'Development timeline' : 'Production & injection'}</span>
-          <em>{chart === 'timeline' ? 'calendar years · produced volume MMBOE' : 'monthly reservoir volumes · active wells'}</em>
+          <em>{chart === 'timeline' ? 'calendar years · produced volume MMBOE' : 'monthly surface volumes · bbl & boe · active wells'}</em>
           {monthly.length > 0 && (
             <span className="fds-ad-seg">
               <button className={chart === 'flow' ? 'on' : ''} onClick={() => setChart('flow')}>Flow</button>

@@ -2,7 +2,9 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { buildFlow } from '../src/tabs/fielddev/flow-series.ts';
+import {
+  buildFlow, SM3_TO_BBL, SM3_GAS_TO_BOE,
+} from '../src/tabs/fielddev/flow-series.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0, fail = 0;
@@ -75,6 +77,57 @@ if (prod?.monthly && index) {
   ok('so the free-gas band is a small minority, not a fat double-counted bar',
     (1 - f.solutionGasShare) < 0.1, `${((1 - f.solutionGasShare) * 100).toFixed(1)}%`);
   ok('gas scale is real', f.maxGas > 1);
+}
+
+// ── the SURFACE stack, in barrels ────────────────────────────────────────────
+//
+// This is the chart the dossier draws: oil → gas → water stacked up, injection
+// mirrored down, all surface volumes. The failure it guards against is treating
+// it as the voidage stack — where solution gas must be EXCLUDED, because those
+// cubic metres are already inside Bo. Here the whole produced gas belongs, and
+// getting that backwards would either double-count oil or hide the gas.
+{
+  const f = buildFlow([
+    { ym: '2010-01', oil: 1000, water: 500, wi: 2000, gas: 160_000 },
+  ], 160);
+  const p = f.points[0];
+
+  ok('oil converts at 6.2898 bbl/Sm³', near(p.oilB, 1000 * SM3_TO_BBL, 1e-6), String(p.oilB));
+  ok('water converts the same way', near(p.waterB, 500 * SM3_TO_BBL, 1e-6));
+  ok('injection converts the same way', near(p.injB, 2000 * SM3_TO_BBL, 1e-6));
+  // 5,800 scf/boe — the same number RM's MSCF_PER_BOE = 5.8 expresses
+  ok('gas converts at 5,800 scf/boe', near(p.gasB, 160_000 * SM3_GAS_TO_BOE, 1e-6), String(p.gasB));
+  ok('the boe factor is the industry one', near(SM3_GAS_TO_BOE, 35.314666 / 5800, 1e-12));
+
+  // THE distinction this module exists for
+  ok('the surface stack carries the WHOLE produced gas, not just the free part',
+    p.gasB > 0 && near(p.gasB, (p.solutionGas + p.freeGas) * SM3_GAS_TO_BOE, 1e-6));
+  ok('this month is entirely solution gas, so the VOIDAGE band is zero',
+    p.freeGas === 0 && p.freeGasV === 0);
+  ok('…and yet the SURFACE gas bar is not — the two answer different questions',
+    p.gasB > 0);
+
+  ok('the produced maximum is the whole stack, so no bar overflows its half',
+    near(f.maxProducedB, p.oilB + p.gasB + p.waterB, 1e-6));
+  ok('the injected maximum is the injection bar', near(f.maxInjectedB, p.injB, 1e-6));
+}
+{
+  // gas with no oil is all free gas, and must still stack
+  const f = buildFlow([{ ym: '2010-01', oil: 0, water: 0, wi: 0, gas: 50_000 }], 160);
+  ok('gas with no oil is entirely free', f.points[0].freeGas === 50_000);
+  ok('and still lands in the surface bar', near(f.points[0].gasB, 50_000 * SM3_GAS_TO_BOE, 1e-6));
+  ok('no oil means no GOR rather than a zero that reads as dry oil',
+    f.points[0].gor === null);
+}
+{
+  const f = buildFlow([{ ym: '2010-01', oil: 100, water: 0, wi: 0 }], 160);
+  ok('a month with no gas record contributes no gas bar', f.points[0].gasB === 0);
+  ok('and the stack is still the oil', near(f.maxProducedB, 100 * SM3_TO_BBL, 1e-6));
+}
+{
+  const f = buildFlow([], 160);
+  ok('an empty series gives non-zero maxima rather than dividing by zero',
+    f.maxProducedB === 1 && f.maxInjectedB === 1);
 }
 
 console.log(`flow-series: ${pass}/${pass + fail}`);

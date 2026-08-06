@@ -12,16 +12,36 @@
 // decline; both falling together is well availability. Two very different
 // problems, and the chart now distinguishes them.
 //
+// UNITS: SURFACE VOLUMES IN BARRELS, oil → gas → water stacked up, injection
+// mirrored down — the same grammar and the same 5,800 scf/boe as the RM
+// surveillance chart, so moving between the tabs is reading one picture.
+//
+// This replaced a reservoir-voidage stack, and the swap changes what the gas
+// band MEANS. In voidage terms the solution gas has to be excluded, because
+// those cubic metres are already inside Bo and stacking them counts the same
+// volume twice — which left an honest but nearly invisible free-gas sliver on
+// an undersaturated field like Volve. In SURFACE terms the whole produced gas
+// belongs in the stack: every one of those standard cubic metres came up the
+// well and was sold. Same data, different question, different number.
+//
+// Water is barrels of LIQUID on the same axis, not barrels of oil equivalent —
+// water carries no energy. The axis says "surface volume" rather than claiming
+// the stack is one physical quantity. That is the compromise the RM chart makes
+// and it is the industry-standard one.
+//
 // d3-scale + d3-shape for the maths; React owns the DOM.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { line as d3line, area as d3area, curveStepAfter, curveMonotoneX } from 'd3-shape';
+import { line as d3line, curveStepAfter } from 'd3-shape';
 import { cssVar } from './hooks';
 import type { ProdMonth } from '../../wb/types';
-import { VOIDAGE_DEFAULT, voidageProduced, voidageInjected, type Voidage } from '../../engine/surveillance';
+import { VOIDAGE_DEFAULT, type Voidage } from '../../engine/surveillance';
 import { buildActivity, type WellSeries } from './well-activity';
 import { buildFlow } from './flow-series';
 
 const PAD = { l: 46, r: 42, t: 14, b: 26 };
+
+/** Barrels, at a magnitude a reader can hold in their head. */
+const fmtB = (b: number) => (b >= 1e6 ? `${(b / 1e6).toFixed(2)} MMbbl` : `${(b / 1e3).toFixed(0)}k bbl`);
 
 export function WellCountPanel({ months, wells, v = VOIDAGE_DEFAULT, height, rs = null }: {
   months: ProdMonth[];
@@ -63,13 +83,12 @@ export function WellCountPanel({ months, wells, v = VOIDAGE_DEFAULT, height, rs 
   const m = useMemo(() => {
     const iw = size.w - PAD.l - PAD.r, ih = size.h - PAD.t - PAD.b;
     if (iw < 30 || ih < 30 || !months.length) return null;
-    const prod = flow.points.map((p) => voidageProduced(
-      { oil: p.oil, water: p.water, wi: 0, gasFree: p.freeGas }, v,
-    ));
-    const inj = months.map((mm) => voidageInjected({ oil: 0, water: 0, wi: mm.wi }, v));
-    const oilV = flow.points.map((p) => p.oilV);
-    const gasV = flow.points.map((p) => p.freeGasV);
-    const watV = flow.points.map((p) => p.waterV);
+    // surface barrels — see the header for why this is not the voidage stack
+    const oilV = flow.points.map((p) => p.oilB);
+    const gasV = flow.points.map((p) => p.gasB);
+    const watV = flow.points.map((p) => p.waterB);
+    const prod = flow.points.map((p) => p.oilB + p.gasB + p.waterB);
+    const inj = flow.points.map((p) => p.injB);
     const maxVol = Math.max(1, ...prod, ...inj);
     const zeroY = PAD.t + ih / 2, halfH = ih / 2;
     const bw = iw / months.length;
@@ -79,14 +98,7 @@ export function WellCountPanel({ months, wells, v = VOIDAGE_DEFAULT, height, rs 
     // it explains. Rounded up to a sensible tick so the top is never a bare max.
     const wMax = Math.max(4, Math.ceil(act.maxWells / 2) * 2);
     const nToY = (n: number) => zeroY - (Math.min(wMax, n) / wMax) * halfH;
-    // Gas rides the production half on its OWN scale. It has to: gas is a surface
-    // volume in Sm³ and the bars are reservoir volumes in rm³, so there is no
-    // shared axis they could honestly share. Drawn as a line rather than a bar
-    // segment for the same reason — a stacked segment would imply it adds to the
-    // voidage beneath it, and 98% of it does not.
-    const gMax = Math.max(1, flow.maxGas);
-    const gToY = (g: number) => zeroY - (g / gMax) * halfH;
-    return { iw, ih, prod, inj, oilV, gasV, watV, maxVol, zeroY, halfH, bw, xAt, volPx, wMax, nToY, gMax, gToY };
+    return { iw, ih, prod, inj, oilV, gasV, watV, maxVol, zeroY, halfH, bw, xAt, volPx, wMax, nToY };
   }, [months, size, v, act.maxWells, flow]);
 
   const line = cssVar('--line'), muted = cssVar('--muted');
@@ -110,15 +122,6 @@ export function WellCountPanel({ months, wells, v = VOIDAGE_DEFAULT, height, rs 
   const iLine = useMemo(() => (m
     ? d3line<number>().x((_, i) => m.xAt(i) + m.bw / 2).y((d) => m.nToY(d)).curve(curveStepAfter)(act.points.map((p) => p.injectors)) || ''
     : ''), [m, act]);
-
-  // Monotone, not stepped: a gas rate is a continuous measurement, unlike a well
-  // count. Filled underneath so it reads as a rate envelope over the bars.
-  const gLine = useMemo(() => (m
-    ? d3line<number>().x((_, i) => m.xAt(i) + m.bw / 2).y((d) => m.gToY(d)).curve(curveMonotoneX)(flow.points.map((p) => p.gas)) || ''
-    : ''), [m, flow]);
-  const gArea = useMemo(() => (m
-    ? d3area<number>().x((_, i) => m.xAt(i) + m.bw / 2).y0(m.zeroY).y1((d) => m.gToY(d)).curve(curveMonotoneX)(flow.points.map((p) => p.gas)) || ''
-    : ''), [m, flow]);
 
   function onMove(e: React.PointerEvent) {
     if (!m || !svgRef.current) return;
@@ -155,29 +158,15 @@ export function WellCountPanel({ months, wells, v = VOIDAGE_DEFAULT, height, rs 
                   transition: reduce ? undefined : `transform .6s cubic-bezier(.4,0,.2,1) ${Math.min(i * 0.004, 0.5)}s`,
                 }}>
                   <rect x={x} y={m.zeroY - ho} width={w} height={ho} fill={oilC} />
-                  {/* free gas sits ON oil, where it exists. Zero-height while the
-                      field's voidage set carries no Bg, which is the honest answer
-                      for an undersaturated reservoir rather than a padded bar. */}
-                  {hg > 0.4 && <rect x={x} y={m.zeroY - ho - hg} width={w} height={hg} fill={gasC} />}
+                  {/* gas sits BETWEEN oil and water — the conventional stack order,
+                      and the same order the RM surveillance chart uses */}
+                  {hg > 0.2 && <rect x={x} y={m.zeroY - ho - hg} width={w} height={hg} fill={gasC} />}
                   <rect x={x} y={m.zeroY - ho - hg - hw} width={w} height={hw} fill={watC} />
                   <rect x={x} y={m.zeroY} width={w} height={hj} fill={wiC} />
                 </g>
               </g>
             );
           })}
-
-          {/* gas rate, on its own scale over the production half */}
-          <defs>
-            <linearGradient id="fds-gasfill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={gasC} stopOpacity={0.34} />
-              <stop offset="100%" stopColor={gasC} stopOpacity={0.02} />
-            </linearGradient>
-          </defs>
-          <path d={gArea} fill="url(#fds-gasfill)" stroke="none"
-            style={reduce ? undefined : { opacity: drawn ? 1 : 0, transition: 'opacity .7s ease .2s' }} />
-          <path d={gLine} fill="none" stroke={gasC} strokeWidth={1.7} strokeLinejoin="round" strokeLinecap="round"
-            style={reduce ? undefined : { strokeDasharray: 1, strokeDashoffset: drawn ? 0 : 1, transition: 'stroke-dashoffset .9s ease' }}
-            pathLength={reduce ? undefined : 1} />
 
           <path d={pLine} fill="none" stroke={prodLineC} strokeWidth={1.9} strokeLinejoin="round"
             style={reduce ? undefined : { strokeDasharray: 1, strokeDashoffset: drawn ? 0 : 1, transition: 'stroke-dashoffset .8s ease' }}
@@ -199,8 +188,6 @@ export function WellCountPanel({ months, wells, v = VOIDAGE_DEFAULT, height, rs 
                 stroke={muted} strokeWidth={1} opacity={0.4} />
               <circle cx={m.xAt(hi) + m.bw / 2} cy={m.nToY(act.points[hi].producers)} r={3.2}
                 fill={cssVar('--panel')} stroke={prodLineC} strokeWidth={2} />
-              <circle cx={m.xAt(hi) + m.bw / 2} cy={m.gToY(flow.points[hi].gas)} r={3}
-                fill={cssVar('--panel')} stroke={gasC} strokeWidth={2} />
             </>
           )}
         </svg>
@@ -213,10 +200,10 @@ export function WellCountPanel({ months, wells, v = VOIDAGE_DEFAULT, height, rs 
           borderRadius: 6, padding: '5px 8px', pointerEvents: 'none', boxShadow: '0 4px 14px rgba(0,0,0,0.16)',
         }}>
           <div style={{ color: 'var(--muted)', marginBottom: 3 }}>{months[hi].ym}</div>
-          <div style={{ display: 'flex', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: oilC }} /><span style={{ color: 'var(--muted)', flex: 1 }}>oil</span><span>{(m.oilV[hi] / 1e3).toFixed(1)}k rm³</span></div>
-          <div style={{ display: 'flex', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: watC }} /><span style={{ color: 'var(--muted)', flex: 1 }}>water</span><span>{(m.watV[hi] / 1e3).toFixed(1)}k</span></div>
-          <div style={{ display: 'flex', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: wiC }} /><span style={{ color: 'var(--muted)', flex: 1 }}>inj</span><span>{(m.inj[hi] / 1e3).toFixed(1)}k</span></div>
-          <div style={{ display: 'flex', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: gasC }} /><span style={{ color: 'var(--muted)', flex: 1 }}>gas</span><span>{(flow.points[hi].gas / 1e6).toFixed(2)}M Sm³</span></div>
+          <div style={{ display: 'flex', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: oilC }} /><span style={{ color: 'var(--muted)', flex: 1 }}>oil</span><span>{fmtB(m.oilV[hi])}</span></div>
+          <div style={{ display: 'flex', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: watC }} /><span style={{ color: 'var(--muted)', flex: 1 }}>water</span><span>{fmtB(m.watV[hi])}</span></div>
+          <div style={{ display: 'flex', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: wiC }} /><span style={{ color: 'var(--muted)', flex: 1 }}>inj</span><span>{fmtB(m.inj[hi])}</span></div>
+          <div style={{ display: 'flex', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: gasC }} /><span style={{ color: 'var(--muted)', flex: 1 }}>gas</span><span>{fmtB(m.gasV[hi])} <em style={{ fontStyle: 'normal', opacity: .6 }}>({(flow.points[hi].gas / 1e6).toFixed(2)}M Sm³)</em></span></div>
           {/* GOR against the field's own solution GOR is the reading that says
               whether this month made free gas at all. Null oil ⇒ no GOR, said so. */}
           <div style={{ display: 'flex', gap: 6 }}><span style={{ width: 8 }} /><span style={{ color: 'var(--muted)', flex: 1 }}>GOR</span><span>
@@ -231,12 +218,14 @@ export function WellCountPanel({ months, wells, v = VOIDAGE_DEFAULT, height, rs 
       {m && (
         <div className="fds-ad-flow-key">
           <span><i style={{ background: oilC }} />oil</span>
+          {/* The old caveat here — "98% in solution, so only free gas is stacked"
+              — belonged to the VOIDAGE stack and would be wrong now. In surface
+              barrels the whole produced gas is stacked, because all of it was
+              produced and sold. What is worth saying instead is the conversion. */}
           <span><i style={{ background: gasC }} />gas
-            {flow.solutionGasShare != null && (
-              <em title={`Produced gas is split on the field's own solution GOR (Rs ${flow.rs}). Solution gas was dissolved in the oil in the reservoir and is already inside the oil voidage, so it is NOT stacked again; only free gas is.`}>
-                {' '}({(flow.solutionGasShare * 100).toFixed(0)}% in solution)
-              </em>
-            )}
+            <em title="Produced gas converted at the industry 5,800 scf/boe — the same 5.8 Mscf/boe the Reservoir Management surveillance chart uses.">
+              {' '}(boe @ 5,800 scf)
+            </em>
           </span>
           <span><i style={{ background: watC }} />water</span>
           <span><i style={{ background: wiC }} />injected</span>

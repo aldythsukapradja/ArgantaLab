@@ -23,6 +23,23 @@
 // not the voidage decomposition.
 import { VOIDAGE_DEFAULT, voidageProduced, voidageInjected, type Voidage } from '../../engine/surveillance.ts';
 
+/**
+ * SURFACE VOLUMES IN BARRELS — the same unit grammar Reservoir Management's
+ * surveillance chart uses, so a reader moving between the two tabs is reading
+ * one picture rather than two.
+ *
+ * Gas converts at the industry 5,800 scf/boe (RM's MSCF_PER_BOE = 5.8, the same
+ * number). Water is barrels of LIQUID, not barrels of oil equivalent — water
+ * carries no energy — so the axis says "surface volume" rather than pretending
+ * the whole stack is one physical quantity. That is exactly the compromise the
+ * RM chart makes, and it is the standard one.
+ */
+export const SM3_TO_BBL = 6.2898;
+const SCF_PER_SM3 = 35.314666;
+const SCF_PER_BOE = 5800;
+/** Sm³ of gas → barrels of oil equivalent */
+export const SM3_GAS_TO_BOE = SCF_PER_SM3 / SCF_PER_BOE;
+
 export interface FlowMonth {
   ym: string;
   oil: number; water: number; wi: number;
@@ -33,6 +50,17 @@ export interface FlowPoint {
   ym: string;
   /** reservoir volumes, stackable against each other and against injection */
   oilV: number; freeGasV: number; waterV: number; injV: number;
+  /**
+   * SURFACE volumes in barrels — what the stacked bars draw.
+   *
+   * `gasB` is the whole produced gas as boe, NOT the free-gas remainder. In a
+   * reservoir-voidage stack the solution gas must be excluded or its cubic
+   * metres are counted twice inside Bo; in a SURFACE stack it must be included,
+   * because every one of those standard cubic metres really did come up the
+   * well and get sold. Two different questions, two different numbers, and
+   * conflating them is the mistake this comment exists to prevent.
+   */
+  oilB: number; gasB: number; waterB: number; injB: number;
   /** surface volumes, as published */
   oil: number; gas: number; water: number; wi: number;
   /** produced gas–oil ratio this month, surface. Null when no oil was made:
@@ -49,6 +77,9 @@ export interface FlowSeries {
   maxProduced: number;
   maxInjected: number;
   maxGas: number;
+  /** largest single-month produced and injected SURFACE totals, in barrels */
+  maxProducedB: number;
+  maxInjectedB: number;
   /** life totals, surface */
   cumOil: number; cumGas: number; cumWater: number; cumWi: number;
   /** share of produced gas that was in solution — the number that justifies the
@@ -88,6 +119,10 @@ export function buildFlow(months: FlowMonth[], rs: number | null, v: Voidage = V
       freeGasV: v.Bg * freeGas,
       waterV: v.Bw * water,
       injV: voidageInjected({ oil: 0, water: 0, wi }, v),
+      oilB: oil * SM3_TO_BBL,
+      gasB: gas * SM3_GAS_TO_BOE,
+      waterB: water * SM3_TO_BBL,
+      injB: wi * SM3_TO_BBL,
       oil, gas, water, wi,
       gor: oil > 0 ? gas / oil : null,
       solutionGas, freeGas,
@@ -103,6 +138,9 @@ export function buildFlow(months: FlowMonth[], rs: number | null, v: Voidage = V
     maxProduced: points.length ? Math.max(1, ...produced) : 1,
     maxInjected: points.length ? Math.max(1, ...points.map((p) => p.injV)) : 1,
     maxGas: points.length ? Math.max(1, ...points.map((p) => p.gas)) : 1,
+    maxProducedB: points.length
+      ? Math.max(1, ...points.map((p) => p.oilB + p.gasB + p.waterB)) : 1,
+    maxInjectedB: points.length ? Math.max(1, ...points.map((p) => p.injB)) : 1,
     cumOil, cumGas, cumWater, cumWi,
     solutionGasShare: rs != null && cumGas > 0 ? cumSolution / cumGas : null,
     rs: rs != null && Number.isFinite(rs) ? rs : null,
