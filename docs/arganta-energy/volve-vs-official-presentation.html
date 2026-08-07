@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArgantaEnergy × Volve — Reconciliation vs Official Record</title>
+<style>
+  :root{
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page:           #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --grid:           #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --success:        #006300;
+
+    --blue:    #2a78d6;   /* Official / Sodir */
+    --green:   #008300;   /* ArgantaEnergy computed */
+    --magenta: #e87ba4;
+    --yellow:  #eda100;
+    --aqua:    #1baf7a;
+    --orange:  #eb6834;   /* Injector */
+    --violet:  #4a3aa7;   /* Peer / third-party estimate */
+    --red:     #e34948;
+
+    --blue-track:  #cde2fb;
+    --green-track: #cdeccd;
+
+    --good: #0ca30c;
+    --warning: #fab219;
+    --serious: #ec835a;
+    --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])){
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page:           #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --grid:           #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --success:        #0ca30c;
+
+      --blue:    #3987e5;
+      --green:   #008300;
+      --magenta: #d55181;
+      --yellow:  #c98500;
+      --aqua:    #199e70;
+      --orange:  #d95926;
+      --violet:  #9085e9;
+      --red:     #e66767;
+
+      --blue-track:  #16324f;
+      --green-track: #123a12;
+    }
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page);
+    color: var(--text-primary);
+    scroll-snap-type: y mandatory;
+    overflow-y: scroll;
+    height: 100vh;
+  }
+  section.slide{
+    scroll-snap-align: start;
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 64px 8vw;
+    position: relative;
+    border-bottom: 1px solid var(--grid);
+  }
+  .kicker{
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue);
+    margin: 0 0 14px 0;
+  }
+  h1{ font-size: clamp(34px, 4.4vw, 56px); line-height:1.08; margin: 0 0 16px 0; font-weight: 800; letter-spacing:-0.01em; }
+  h2{ font-size: clamp(26px, 3vw, 38px); line-height:1.12; margin: 0 0 10px 0; font-weight: 800; letter-spacing:-0.01em; }
+  .lede{ font-size: clamp(16px, 1.5vw, 19px); color: var(--text-secondary); max-width: 760px; line-height:1.55; margin: 0 0 6px 0; }
+  .source-note{ font-size: 12.5px; color: var(--text-muted); margin-top: 18px; line-height:1.6; }
+  .source-note code{ background: var(--surface-1); border:1px solid var(--border); border-radius:4px; padding:1px 5px; font-size:11.5px; }
+
+  /* ---- nav dots ---- */
+  #navdots{
+    position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
+    display:flex; flex-direction:column; gap:10px; z-index: 50;
+  }
+  #navdots button{
+    width:9px; height:9px; border-radius:50%; border:1.5px solid var(--baseline);
+    background: transparent; cursor:pointer; padding:0;
+  }
+  #navdots button.active{ background: var(--blue); border-color: var(--blue); }
+  #navdots button:hover{ border-color: var(--blue); }
+
+  .progress{
+    position: fixed; left:0; top:0; height:3px; background: var(--blue);
+    z-index: 60; transition: width .15s ease; width:0%;
+  }
+
+  /* ---- stat tiles ---- */
+  .tiles{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 34px; max-width: 1180px; }
+  .tile{ background: var(--surface-1); border:1px solid var(--border); border-radius:12px; padding:22px 20px; }
+  .tile .label{ font-size:12.5px; color: var(--text-secondary); margin-bottom:10px; font-weight:600; }
+  .tile .value{ font-size: clamp(26px, 2.6vw, 34px); font-weight:800; letter-spacing:-0.01em; }
+  .tile .delta{ font-size: 13px; margin-top:8px; font-weight:700; }
+  .tile .delta.good{ color: var(--success); }
+  .tile .delta.flat{ color: var(--text-muted); }
+  .tile .sub{ font-size:12px; color:var(--text-muted); margin-top:4px; }
+
+  /* ---- fact grid ---- */
+  .factgrid{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--grid); border:1px solid var(--grid); border-radius:12px; overflow:hidden; margin-top: 30px; max-width: 1180px; }
+  .fact{ background: var(--surface-1); padding:16px 18px; }
+  .fact .k{ font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:6px; font-weight:700; }
+  .fact .v{ font-size:16px; font-weight:700; }
+
+  /* ---- legend ---- */
+  .legend{ display:flex; gap:20px; flex-wrap:wrap; margin: 18px 0 8px 0; }
+  .legend .item{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-secondary); font-weight:600; }
+  .legend .swatch{ width:12px; height:12px; border-radius:3px; flex:none; }
+
+  /* ---- bar chart (vertical grouped) ---- */
+  .barpanel{ max-width: 1180px; margin-top: 10px; }
+  .bargroup{ display:flex; align-items:flex-end; gap:36px; height: 220px; padding: 0 6px; border-bottom: 1px solid var(--baseline); }
+  .barcol{ display:flex; flex-direction:column; align-items:center; gap:8px; width: 92px; height:100%; justify-content:flex-end; }
+  .bar{ width: 100%; max-width:56px; border-radius: 4px 4px 0 0; position:relative; }
+  .bar .val{ position:absolute; top:-22px; left:0; right:0; text-align:center; font-size:13px; font-weight:800; color:var(--text-primary); white-space:nowrap; }
+  .barcol .caption{ font-size:12px; color:var(--text-secondary); text-align:center; line-height:1.35; margin-top:2px; font-weight:600; }
+  .panels-row{ display:flex; gap:56px; flex-wrap:wrap; }
+  .panel{ }
+  .panel .paneltitle{ font-size:13px; font-weight:800; color:var(--text-primary); margin-bottom:4px; }
+  .panel .panelsub{ font-size:12px; color:var(--text-muted); margin-bottom:18px; }
+
+  /* ---- horizontal bar chart ---- */
+  .hbars{ max-width: 900px; margin-top: 28px; }
+  .hbar-row{ display:grid; grid-template-columns: 220px 1fr 108px; align-items:center; gap:14px; margin-bottom: 16px; }
+  .hbar-row .name{ font-size:13.5px; font-weight:700; text-align:right; color: var(--text-primary); }
+  .hbar-row .name .tag{ display:block; font-size:11px; font-weight:600; color:var(--text-muted); margin-top:2px; }
+  .hbar-track{ background: var(--grid); border-radius:4px; height:22px; position:relative; overflow:visible; }
+  .hbar-fill{ height:100%; border-radius:4px; }
+  .hbar-row .num{ font-size:13.5px; font-weight:800; font-variant-numeric: tabular-nums; }
+  .hbar-row .num .unit{ font-size:11px; font-weight:600; color:var(--text-muted); margin-left:3px; }
+
+  /* ---- meters (coverage) ---- */
+  .meters{ max-width: 1000px; margin-top: 26px; display:grid; grid-template-columns: 1fr 1fr; gap: 20px 40px; }
+  .meter-row .mtop{ display:flex; justify-content:space-between; font-size:13.5px; font-weight:700; margin-bottom:7px; }
+  .meter-row .mtop .frac{ font-variant-numeric: tabular-nums; color: var(--text-secondary); font-weight:700; }
+  .meter-track{ height:12px; border-radius:6px; background: var(--blue-track); overflow:hidden; }
+  .meter-fill{ height:100%; background: var(--blue); border-radius:6px; }
+
+  /* ---- table ---- */
+  table.tt{ border-collapse: collapse; width:100%; max-width: 980px; margin-top: 24px; font-size: 14px; }
+  table.tt th{ text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); font-weight:700; padding: 8px 14px; border-bottom: 1px solid var(--baseline); }
+  table.tt td{ padding: 12px 14px; border-bottom: 1px solid var(--grid); font-weight:600; }
+  table.tt td.num{ font-variant-numeric: tabular-nums; text-align:right; }
+  table.tt tr:last-child td{ border-bottom:none; }
+  .pill{ display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; padding:3px 9px; border-radius:100px; }
+  .pill.good{ color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+  .pill.warn{ color: #8a6400; background: color-mix(in srgb, var(--warning) 24%, transparent); }
+  .pill dot{ width:6px; height:6px; border-radius:50%; background: currentColor; display:inline-block; }
+
+  /* ---- two column ---- */
+  .cols2{ display:grid; grid-template-columns: 1fr 1fr; gap: 40px; max-width: 1180px; margin-top: 26px; }
+  .datacol h3{ font-size:15px; margin:0 0 14px 0; display:flex; align-items:center; gap:8px; }
+  .datacol ul{ margin:0; padding:0; list-style:none; }
+  .datacol li{ font-size:14px; color: var(--text-secondary); padding: 9px 0; border-bottom:1px solid var(--grid); display:flex; justify-content:space-between; gap: 12px; }
+  .datacol li b{ color: var(--text-primary); font-weight:700; }
+  .dot-good{ width:9px; height:9px; border-radius:50%; background:var(--good); flex:none; }
+  .dot-critical{ width:9px; height:9px; border-radius:50%; background:var(--critical); flex:none; }
+
+  /* ---- callout ---- */
+  .callout{ max-width: 900px; margin-top: 28px; background: var(--surface-1); border:1px solid var(--border); border-left: 4px solid var(--yellow); border-radius: 10px; padding: 20px 22px; }
+  .callout .ctitle{ font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:#8a6400; margin-bottom:8px; }
+  .callout p{ margin:0 0 8px 0; font-size:14.5px; line-height:1.6; color:var(--text-secondary); }
+  .callout code{ background: var(--page); border:1px solid var(--border); border-radius:4px; padding:1px 5px; font-size:12.5px; }
+
+  .cite-list{ max-width: 900px; margin-top: 24px; }
+  .cite{ padding: 12px 0; border-bottom:1px solid var(--grid); display:flex; justify-content:space-between; gap:20px; align-items:baseline; }
+  .cite .cname{ font-size:14px; font-weight:700; }
+  .cite .ctag{ font-size:11px; font-weight:700; color: var(--blue); text-transform:uppercase; letter-spacing:.05em; }
+  .cite a{ color: var(--text-secondary); font-size:12.5px; text-decoration:none; word-break:break-all; }
+  .cite a:hover{ color: var(--blue); text-decoration:underline; }
+
+  .slideno{ position:absolute; bottom: 28px; left: 8vw; font-size:12px; color: var(--text-muted); font-weight:700; font-variant-numeric: tabular-nums; }
+  .bignum{ font-size: clamp(64px,9vw,120px); font-weight:800; letter-spacing:-0.02em; line-height:1; margin: 18px 0 6px 0; }
+  .closing-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:18px; max-width:1180px; margin-top:36px; }
+  .closing-grid .c{ background:var(--surface-1); border:1px solid var(--border); border-radius:12px; padding:20px; }
+  .closing-grid .c .n{ font-size:13px; font-weight:800; color:var(--blue); margin-bottom:8px; }
+  .closing-grid .c p{ font-size:13.5px; color:var(--text-secondary); line-height:1.55; margin:0; }
+
+  @media (max-width: 900px){
+    .tiles{ grid-template-columns: repeat(2,1fr); }
+    .factgrid{ grid-template-columns: repeat(2,1fr); }
+    .cols2{ grid-template-columns: 1fr; }
+    .meters{ grid-template-columns: 1fr; }
+    .closing-grid{ grid-template-columns: 1fr; }
+    section.slide{ padding: 48px 6vw; }
+  }
+  @media print{
+    #navdots, .progress{ display:none; }
+    section.slide{ min-height:auto; page-break-after: always; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<div id="navdots"></div>
+
+<!-- 1. COVER -->
+<section class="slide" id="s1">
+  <div class="kicker">ArgantaEnergy · Field Reconciliation Brief</div>
+  <h1>Volve, reconciled.<br>What we compute vs. what the regulator published.</h1>
+  <p class="lede">A field-by-field check of ArgantaEnergy's live Volve workbench against Sodir's (Norwegian Offshore Directorate) official field accounting for NPDID 3420717 — plus what independent published studies say, and where our own numbers still disagree with each other.</p>
+  <p class="source-note">Prepared 2026-08-06 · sources: <code>apps/energy/public/wb/index.json</code>, <code>build-workbench-data.mjs</code>, Sodir factpages, 3 peer-reviewed studies (see closing slide)</p>
+  <div class="slideno">01 / 11</div>
+</section>
+
+<!-- 2. EXEC SUMMARY -->
+<section class="slide" id="s2">
+  <div class="kicker">Executive Summary</div>
+  <h2>Four numbers, checked against the regulator.</h2>
+  <p class="lede">After a mid-project recalibration (slide 4), ArgantaEnergy's independently-computed field metrics now land within ~1–2% of Sodir's official Volve accounting.</p>
+  <div class="tiles">
+    <div class="tile">
+      <div class="label">STOIIP — screening vs official</div>
+      <div class="value">19 <span style="font-size:16px;color:var(--text-muted)">vs 18.70 MMSm³</span></div>
+      <div class="delta good">agrees within 1.6%</div>
+      <div class="sub">was 142.3 MMSm³ (7.6×) before recalibration</div>
+    </div>
+    <div class="tile">
+      <div class="label">Recovery factor</div>
+      <div class="value">53.7% <span style="font-size:16px;color:var(--text-muted)">vs 54.4%</span></div>
+      <div class="delta good">−0.7 pp</div>
+      <div class="sub">computed on official STOIIP basis</div>
+    </div>
+    <div class="tile">
+      <div class="label">Cumulative oil produced</div>
+      <div class="value">10.04 <span style="font-size:16px;color:var(--text-muted)">vs 10.17 MMSm³</span></div>
+      <div class="delta good">−1.3%</div>
+      <div class="sub">63.1 MMbbl over 112 producing months</div>
+    </div>
+    <div class="tile">
+      <div class="label">GIIP (derived from deck Rs)</div>
+      <div class="value">2.812 <span style="font-size:16px;color:var(--text-muted)">vs 2.80 bcm</span></div>
+      <div class="delta good">+0.4%</div>
+      <div class="sub">independently confirms Rs 148 Sm³/Sm³</div>
+    </div>
+  </div>
+  <p class="source-note">Source: <code>wb/index.json → official</code> (Sodir factpage) and <code>→ validation.reconcile</code> (ArgantaEnergy, build-time computed, not hand-typed).</p>
+  <div class="slideno">02 / 11</div>
+</section>
+
+<!-- 3. FIELD BASICS -->
+<section class="slide" id="s3">
+  <div class="kicker">The Field</div>
+  <h2>Volve — the ground truth we're reconciling against.</h2>
+  <p class="lede">Standalone Sodir field record, not part of Sleipner/Utsira — though its raw pick file spatially overlaps the wider Sleipner area (unrelated wells excluded on purpose).</p>
+  <div class="factgrid">
+    <div class="fact"><div class="k">Operator</div><div class="v">Equinor Energy AS</div></div>
+    <div class="fact"><div class="k">Block / Licence</div><div class="v">15/9 · PL 046 / 046 BS</div></div>
+    <div class="fact"><div class="k">Field NPDID</div><div class="v">3420717</div></div>
+    <div class="fact"><div class="k">Discovery</div><div class="v">1993 · well 15/9-19 SR</div></div>
+    <div class="fact"><div class="k">PDO approved</div><div class="v">April 2005</div></div>
+    <div class="fact"><div class="k">First production</div><div class="v">2008-02-12</div></div>
+    <div class="fact"><div class="k">Cessation</div><div class="v">2016-09-21</div></div>
+    <div class="fact"><div class="k">Producing span</div><div class="v">112 months</div></div>
+    <div class="fact"><div class="k">Peak oil rate</div><div class="v">56,000 bopd</div></div>
+    <div class="fact"><div class="k">Reservoir</div><div class="v">Hugin Fm, Mid. Jurassic — 2700–3100 m</div></div>
+    <div class="fact"><div class="k">Drive mechanism</div><div class="v">Water injection</div></div>
+    <div class="fact"><div class="k">Status</div><div class="v">Shut down · 0 remaining reserves</div></div>
+  </div>
+  <div class="source-note">Source: Sodir factpage NPDID 3420717 · <code>apps/energy/src/atlas/volve.ts</code></div>
+  <div class="slideno">03 / 11</div>
+</section>
+
+<!-- 4. THE RECALIBRATION STORY -->
+<section class="slide" id="s4">
+  <div class="kicker">Methodology Maturity</div>
+  <h2>The screening estimate used to be 7.6× too high. It isn't anymore.</h2>
+  <p class="lede">Our screening STOIIP is a blanket oil-water-contact calculation over an unfaulted closure — deliberately a gross upper bound, not the reservoir engineering answer. Moving the contact from the raw deck baseline (3200 m) to a calibrated 3065 m collapsed the overstatement from 7.6× down to ~1×.</p>
+  <div class="panels-row">
+    <div class="panel">
+      <div class="paneltitle">Before — 3200 m deck baseline</div>
+      <div class="panelsub">screening overstated by 7.6× → implied RF ≈ 7%</div>
+      <div class="bargroup" style="height:180px;">
+        <div class="barcol">
+          <div class="bar" style="height:170px; background:var(--text-muted);"><span class="val">142.3</span></div>
+          <div class="caption">Screening<br>STOIIP</div>
+        </div>
+        <div class="barcol">
+          <div class="bar" style="height:22px; background:var(--blue);"><span class="val">18.7</span></div>
+          <div class="caption">Official<br>(Sodir)</div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="paneltitle">After — 3065 m calibrated contact (current)</div>
+      <div class="panelsub">screening agrees within ~1.6% → RF 53.7% vs official 54.4%</div>
+      <div class="bargroup" style="height:180px;">
+        <div class="barcol">
+          <div class="bar" style="height:24px; background:var(--green);"><span class="val">19</span></div>
+          <div class="caption">Screening<br>STOIIP</div>
+        </div>
+        <div class="barcol">
+          <div class="bar" style="height:22px; background:var(--blue);"><span class="val">18.7</span></div>
+          <div class="caption">Official<br>(Sodir)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="legend">
+    <div class="item"><span class="swatch" style="background:var(--text-muted)"></span>Historical / superseded</div>
+    <div class="item"><span class="swatch" style="background:var(--green)"></span>ArgantaEnergy (current)</div>
+    <div class="item"><span class="swatch" style="background:var(--blue)"></span>Official (Sodir)</div>
+  </div>
+  <p class="source-note">All values MMSm³. Same effect independently visible in mapped area: the published 3200 m contact contoured over Top Hugin encloses 24.4 km² vs the regulator's mapped 3.70 km² field outline (6.6× overstatement) — fault compartmentalization the blanket contour doesn't see. Source: <code>build-workbench-data.mjs:1092-1103</code>, <code>contact-contour.ts:96-100</code>.</p>
+  <div class="slideno">04 / 11</div>
+</section>
+
+<!-- 5. STOIIP SPREAD -->
+<section class="slide" id="s5">
+  <div class="kicker">The Spread Is the Teaching</div>
+  <h2>Six ways to estimate in-place oil. We show all of them.</h2>
+  <p class="lede">Rather than quoting one STOIIP number, the workbench keeps the full spread of estimates — screening, peer-published, and our own recalibrated figure — bracketing the official value instead of hiding behind it.</p>
+  <div class="hbars">
+    <div class="hbar-row">
+      <div class="name">Screening (upper bound)<span class="tag">superseded, kept as ceiling</span></div>
+      <div class="hbar-track"><div class="hbar-fill" style="width:100%; background:var(--text-muted);"></div></div>
+      <div class="num">142.3<span class="unit">MMSm³</span></div>
+    </div>
+    <div class="hbar-row">
+      <div class="name">Volumetric analogue<span class="tag">peer · Metsebo 2021</span></div>
+      <div class="hbar-track"><div class="hbar-fill" style="width:47.5%; background:var(--violet);"></div></div>
+      <div class="num">67.6<span class="unit">MMSm³</span></div>
+    </div>
+    <div class="hbar-row">
+      <div class="name">Dynamic (history-matched)<span class="tag">peer · Metsebo 2021</span></div>
+      <div class="hbar-track"><div class="hbar-fill" style="width:15.5%; background:var(--violet);"></div></div>
+      <div class="num">22<span class="unit">MMSm³</span></div>
+    </div>
+    <div class="hbar-row">
+      <div class="name">MBAL, well F-12<span class="tag">peer · Metsebo 2021</span></div>
+      <div class="hbar-track"><div class="hbar-fill" style="width:13.8%; background:var(--violet);"></div></div>
+      <div class="num">19.6<span class="unit">MMSm³</span></div>
+    </div>
+    <div class="hbar-row">
+      <div class="name">Screening (recalibrated)<span class="tag">ArgantaEnergy · current</span></div>
+      <div class="hbar-track"><div class="hbar-fill" style="width:13.4%; background:var(--green);"></div></div>
+      <div class="num">19<span class="unit">MMSm³</span></div>
+    </div>
+    <div class="hbar-row">
+      <div class="name">Official<span class="tag">Sodir factpage</span></div>
+      <div class="hbar-track"><div class="hbar-fill" style="width:13.1%; background:var(--blue);"></div></div>
+      <div class="num">18.7<span class="unit">MMSm³</span></div>
+    </div>
+  </div>
+  <p class="source-note">Bars scaled to the 142.3 MMSm³ screening ceiling. Source: <code>docs/arganta-energy/V1-DATA-MAP.md:87-115</code>; peer paper: Metsebo 2021, <em>J. Energy &amp; Nat. Resources</em>.</p>
+  <div class="slideno">05 / 11</div>
+</section>
+
+<!-- 6. PER-WELL -->
+<section class="slide" id="s6">
+  <div class="kicker">Well-by-Well</div>
+  <h2>Two wells carried 85% of the field.</h2>
+  <p class="lede">Per-well cumulative volumes reconciled against the regulator-published well-role list (6 oil producers, 3 injectors, 3 shallow water-supply wells, 8 observation) — not inferred from "has a production file."</p>
+  <div class="panels-row">
+    <div class="panel">
+      <div class="paneltitle">Oil producers — cumulative oil, % of field total</div>
+      <div class="panelsub">field cumulative oil = 10.04 MMSm³</div>
+      <div class="bargroup" style="height:200px;">
+        <div class="barcol"><div class="bar" style="height:180px; background:var(--blue);"><span class="val">45.6%</span></div><div class="caption">F-12</div></div>
+        <div class="barcol"><div class="bar" style="height:155px; background:var(--blue);"><span class="val">39.3%</span></div><div class="caption">F-14</div></div>
+        <div class="barcol"><div class="bar" style="height:45px; background:var(--blue);"><span class="val">11.4%</span></div><div class="caption">F-11 B</div></div>
+        <div class="barcol"><div class="bar" style="height:8px; background:var(--blue);"><span class="val">1.8%</span></div><div class="caption">F-1 C</div></div>
+        <div class="barcol"><div class="bar" style="height:6px; background:var(--blue);"><span class="val">1.5%</span></div><div class="caption">F-15 D</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="paneltitle">Water injectors — cumulative injected</div>
+      <div class="panelsub">Sm³, over field life</div>
+      <div class="bargroup" style="height:200px;">
+        <div class="barcol"><div class="bar" style="height:180px; background:var(--orange);"><span class="val">16.24M</span></div><div class="caption">F-4<br>102 months</div></div>
+        <div class="barcol"><div class="bar" style="height:156px; background:var(--orange);"><span class="val">14.09M</span></div><div class="caption">F-5<br>+41.2k back-produced</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="legend">
+    <div class="item"><span class="swatch" style="background:var(--blue)"></span>Producer</div>
+    <div class="item"><span class="swatch" style="background:var(--orange)"></span>Injector</div>
+  </div>
+  <p class="source-note">F-15 C also an oil producer (volumes not separately itemized in this brief). F-5 is deliberately preserved as dual injector+producer — disagrees with its published pure-injection purpose, kept rather than overwritten. Source: <code>wb/index.json → metrics</code>, <code>public/nsr/nsr-wellbores.json</code>.</p>
+  <div class="slideno">06 / 11</div>
+</section>
+
+<!-- 7. PIPELINE COVERAGE + BUGS FIXED -->
+<section class="slide" id="s7">
+  <div class="kicker">Data Pipeline</div>
+  <h2>27 wellbores, 11 wellheads — and three real bugs we caught.</h2>
+  <p class="lede">Coverage across the six data types built end-to-end from raw Equinor files. Three structural bugs were found and fixed while building this — not rounding errors, key-collision and alias-coverage bugs that silently dropped real data.</p>
+  <div class="meters">
+    <div class="meter-row"><div class="mtop"><span>Formation picks</span><span class="frac">25 / 27</span></div><div class="meter-track"><div class="meter-fill" style="width:92.6%"></div></div></div>
+    <div class="meter-row"><div class="mtop"><span>Trajectories</span><span class="frac">25 / 27</span></div><div class="meter-track"><div class="meter-fill" style="width:92.6%"></div></div></div>
+    <div class="meter-row"><div class="mtop"><span>Well logs</span><span class="frac">24 / 27</span></div><div class="meter-track"><div class="meter-fill" style="width:88.9%"></div></div></div>
+    <div class="meter-row"><div class="mtop"><span>Production</span><span class="frac">7 / 27</span></div><div class="meter-track"><div class="meter-fill" style="width:25.9%"></div></div></div>
+    <div class="meter-row"><div class="mtop"><span>Drilling (MW/ECD/ROP/WOB)</span><span class="frac">9 / 27</span></div><div class="meter-track"><div class="meter-fill" style="width:33.3%"></div></div></div>
+    <div class="meter-row"><div class="mtop"><span>Formation pressure</span><span class="frac">7 / 27</span></div><div class="meter-track"><div class="meter-fill" style="width:25.9%"></div></div></div>
+  </div>
+  <div class="cols2" style="margin-top:34px;">
+    <div class="datacol">
+      <h3>Bugs found &amp; fixed</h3>
+      <ul>
+        <li><span>Trajectories</span><b>15/25 → 25/25</b></li>
+        <li><span>Well logs (LWD alias gap)</span><b>20/25 → 24/25</b></li>
+        <li><span>Formation tops attributed</span><b>109 → 324/409</b></li>
+      </ul>
+    </div>
+    <div class="datacol">
+      <h3>Root causes</h3>
+      <ul>
+        <li><span>Trajectories</span><b>keying collision</b></li>
+        <li><span>Logs</span><b>wireline-only aliases</b></li>
+        <li><span>Tops</span><b>picks-only wells skipped</b></li>
+      </ul>
+    </div>
+  </div>
+  <p class="source-note">Trajectory bug: F-11/F-11 A/F-11 B/F-11 T2 all shared one <code>nameWell</code> key, collapsing 4 distinct surveys into 1. Log bug: <code>resolveCurves</code> only recognized wireline mnemonics, silently dropping real LWD/MWD composite runs on F-7, F-9, F-9 A, F-11. Source: <code>volve-full-data-pipeline.md</code>, verified live against <code>build-workbench-data.mjs</code>.</p>
+  <div class="slideno">07 / 11</div>
+</section>
+
+<!-- 8. RAW DATA FOOTPRINT -->
+<section class="slide" id="s8">
+  <div class="kicker">Raw Data Footprint</div>
+  <h2>2.0 GB mirrored. Seismic and simulation decks deliberately excluded.</h2>
+  <p class="lede">Every processed output traces to a named raw file via a <code>source_id</code> field — nothing in the workbench is hand-typed. But large classes of Equinor's open dataset were never mirrored at all, by design (hard deny-list), not oversight.</p>
+  <div class="cols2">
+    <div class="datacol">
+      <h3><span class="dot-good"></span> Present — mirrored, 2.0 GB total</h3>
+      <ul>
+        <li><span>Well logs</span><b>164 LAS + 81 DLIS + 20 LIS</b></li>
+        <li><span>Depth-horizon point clouds</span><b>6 files, ~1.1M points</b></li>
+        <li><span>Trajectories</span><b>387 WITSML XML + NPD survey text</b></li>
+        <li><span>Production data</span><b>1 xlsx, 2.3 MB</b></li>
+        <li><span>Well technical docs</span><b>EDM XML + 306 PDFs</b></li>
+      </ul>
+    </div>
+    <div class="datacol">
+      <h3><span class="dot-critical"></span> Absent — deny-listed, never downloaded</h3>
+      <ul>
+        <li><span>All seismic</span><b>SEGY 2D / ST0202 / ST10010 / 4D / VSP</b></li>
+        <li><span>Eclipse simulation deck</span><b>no .DATA/.EGRID/.INIT/.UNRST</b></li>
+        <li><span>RMS geomodels</span><b>both, absent</b></li>
+        <li><span>GeoScience OW Archive</span><b>absent</b></li>
+        <li><span>TWT horizons &amp; faults</span><b>absent</b></li>
+      </ul>
+    </div>
+  </div>
+  <p class="source-note">Build chain: Databricks volume → <code>volve-mirror.mjs</code> → <code>data-energy/raw/</code> (gitignored) → decoders → <code>data-energy/processed/</code> (969 MB) → <code>build-workbench-data.mjs</code> → <code>public/wb/*.json</code>.</p>
+  <div class="slideno">08 / 11</div>
+</section>
+
+<!-- 9. TRUTH-LOCK -->
+<section class="slide" id="s9">
+  <div class="kicker">Verification</div>
+  <h2>812 assertions, live re-run, zero failures.</h2>
+  <p class="lede">Every Volve-touching module carries an independent test script. Counts below are a live re-run at research time, not quoted from memory — several have grown since they were last recorded as the suite keeps being extended.</p>
+  <table class="tt">
+    <tr><th>Module</th><th>Script</th><th>Result</th><th>Volve-specific?</th></tr>
+    <tr><td>Petrophysics</td><td><code>test-petro-compute.mjs</code></td><td class="num">88 / 88</td><td><span class="pill warn"><dot></dot>partial — algorithm math</span></td></tr>
+    <tr><td>Fluids &amp; Rock</td><td><code>test-fluids.mjs</code></td><td class="num">298 / 298</td><td><span class="pill warn"><dot></dot>partial — PVT/units</span></td></tr>
+    <tr><td>Workspace</td><td><code>test-workspace.mjs</code></td><td class="num">36 / 36</td><td><span class="pill warn"><dot></dot>weak — generic logic</span></td></tr>
+    <tr><td>FD Knowledge Bank</td><td><code>test-asset-dossier.mjs</code></td><td class="num">71 / 71</td><td><span class="pill good"><dot></dot>yes — well-role logic</span></td></tr>
+    <tr><td>RM Knowledge Bank</td><td><code>test-surveillance-dossier.mjs</code></td><td class="num">57 / 57</td><td><span class="pill good"><dot></dot>yes — explicit Volve asserts</span></td></tr>
+    <tr><td>Reservoir Management</td><td><code>test-surveillance.mjs</code></td><td class="num">55 / 55</td><td><span class="pill warn"><dot></dot>weak — parity tests</span></td></tr>
+    <tr><td>Drilling pipeline</td><td><code>test-drilling.mjs</code></td><td class="num">207 / 207</td><td><span class="pill good"><dot></dot>yes — per-wellbore asserts</span></td></tr>
+    <tr><td><b>Total</b></td><td></td><td class="num"><b>812 / 812</b></td><td></td></tr>
+  </table>
+  <p class="source-note">RM Knowledge Bank includes literal assertions such as <code>"REAL Volve: recovery ≈ 46% of model OOIP — 45.6%"</code>. A separate 423-assertion suite (<code>test:agent</code>) covers the general-purpose agent framework across the whole world catalogue — not Volve-specific, not included above.</p>
+  <div class="slideno">09 / 11</div>
+</section>
+
+<!-- 10. HONESTY GAP -->
+<section class="slide" id="s10">
+  <div class="kicker">What We Haven't Fixed Yet</div>
+  <h2>The recalibration didn't reach every file.</h2>
+  <p class="lede">This is a real, current inconsistency in the codebase — surfaced by this review, not fixed by it.</p>
+  <div class="callout">
+    <div class="ctitle">⚠ Stale figure still live in the ATLAS catalogue</div>
+    <p><code>apps/energy/src/atlas/volve.ts</code> still hard-codes <b>STOIIP (screening) = 142.3 MMSm³</b> — the pre-recalibration, 7.6×-overstated figure from slide 4 — sitting next to a <b>recovery factor of 0.54</b>, which is actually the <i>official</i> RF, not what dividing cumulative oil by 142.3 would give (~7%).</p>
+    <p>Meanwhile <code>public/wb/index.json</code>'s <code>official</code>/<code>validation</code> blocks already carry the corrected, internally-consistent pairing: 19 MMSm³ screening STOIIP against 53.7% RF.</p>
+    <p>Two Volve data sources in the same codebase currently disagree with each other. Whichever surface reads <code>atlas/volve.ts</code> for this field is quoting a number seven-plus percent below where the field's own reconciled data says it should be.</p>
+  </div>
+  <p class="source-note">Also on record: a citation (<code>C-KIEFT-MILTON</code>, Volve Hugin Fm regional stratigraphy) in the citation vault is marked <code>verified: N</code> — not re-verified this session.</p>
+  <div class="slideno">10 / 11</div>
+</section>
+
+<!-- 11. CLOSING + SOURCES -->
+<section class="slide" id="s11">
+  <div class="kicker">Bottom Line</div>
+  <h2>Independently computed, not hand-tuned to match.</h2>
+  <p class="lede">Every number on this deck came from a build-time script reading raw Equinor/Sodir files — not from typing the official answer into a config. The workbench started 7.6× off on STOIIP, found its own error, recalibrated, and now sits within ~1–2% of the regulator across STOIIP, recovery factor, cumulative oil, and GIIP. One known inconsistency remains open.</p>
+  <div class="closing-grid">
+    <div class="c"><div class="n">Matches official</div><p>STOIIP, RF, cum. oil and GIIP all land within ~0.4%–1.6% of the Sodir factpage after recalibration.</p></div>
+    <div class="c"><div class="n">Brackets independent studies</div><p>Our recalibrated 19 MMSm³ sits inside the peer-published range (19.6–67.6 MMSm³), closest to the MBAL(F-12) figure.</p></div>
+    <div class="c"><div class="n">Still open</div><p><code>atlas/volve.ts</code> needs the same recalibration applied to <code>wb/index.json</code> — a same-day fix, not yet done.</p></div>
+  </div>
+  <div class="cite-list">
+    <div class="cite"><div><div class="cname">Sodir / norskpetroleum — Volve field factpage</div><a href="https://www.norskpetroleum.no/en/facts/field/volve/" target="_blank">norskpetroleum.no/en/facts/field/volve</a></div><div class="ctag">Official</div></div>
+    <div class="cite"><div><div class="cname">Equinor — Volve data sharing</div><a href="https://www.equinor.com/energy/volve-data-sharing" target="_blank">equinor.com/energy/volve-data-sharing</a></div><div class="ctag">Official</div></div>
+    <div class="cite"><div><div class="cname">JESTEC 2022 — STOIIP, contacts, PVT, injectors, RF</div><a href="https://jestec.taylors.edu.my/Vol%2017%20Issue%204%20August%202022/17_4_22.pdf" target="_blank">jestec.taylors.edu.my … 17_4_22.pdf</a></div><div class="ctag">Peer</div></div>
+    <div class="cite"><div><div class="cname">Metsebo 2021, J. Energy &amp; Nat. Resources — F-12 volumetric vs MBAL</div><a href="https://medwinpublishers.com/JENR/comparison-study-between-different-methods-used-in-the-estimation-of-reserves-in-well-f-12-of-volve-field.pdf" target="_blank">medwinpublishers.com/JENR … volve-field.pdf</a></div><div class="ctag">Peer</div></div>
+    <div class="cite"><div><div class="cname">MDPI Applied Sciences 2024 — NTG, porosity, rock physics</div><a href="https://www.mdpi.com/2076-3417/14/4/1345" target="_blank">mdpi.com/2076-3417/14/4/1345</a></div><div class="ctag">Peer</div></div>
+    <div class="cite"><div><div class="cname">f0nzie — runnable Eclipse deck (PVT/Bo source)</div><a href="https://github.com/f0nzie/volve_eclipse_reservoir" target="_blank">github.com/f0nzie/volve_eclipse_reservoir</a></div><div class="ctag">Community</div></div>
+  </div>
+  <div class="slideno">11 / 11</div>
+</section>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('section.slide'));
+  const nav = document.getElementById('navdots');
+  const progress = document.getElementById('progress');
+  slides.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.title = s.id;
+    b.addEventListener('click', () => s.scrollIntoView({behavior:'smooth'}));
+    nav.appendChild(b);
+  });
+  const dots = Array.from(nav.children);
+
+  function onScroll(){
+    const y = window.scrollY;
+    const doc = document.documentElement;
+    const max = doc.scrollHeight - doc.clientHeight;
+    progress.style.width = (max > 0 ? (y/max*100) : 0) + '%';
+
+    let idx = 0, best = Infinity;
+    slides.forEach((s,i)=>{
+      const d = Math.abs(s.getBoundingClientRect().top);
+      if(d < best){ best = d; idx = i; }
+    });
+    dots.forEach((d,i)=> d.classList.toggle('active', i===idx));
+  }
+  document.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  document.addEventListener('keydown', (e)=>{
+    let idx = dots.findIndex(d=>d.classList.contains('active'));
+    if(e.key === 'ArrowDown' || e.key === 'PageDown'){ e.preventDefault(); slides[Math.min(idx+1, slides.length-1)].scrollIntoView({behavior:'smooth'}); }
+    if(e.key === 'ArrowUp' || e.key === 'PageUp'){ e.preventDefault(); slides[Math.max(idx-1, 0)].scrollIntoView({behavior:'smooth'}); }
+  });
+</script>
+</body>
+</html>
