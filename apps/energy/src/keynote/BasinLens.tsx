@@ -15,17 +15,31 @@
 // field points from cockpit-scope-fields.json. The geologist in the room will
 // recognise the shape at every stop, which is the entire reason not to fake it.
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { geoEquirectangular, geoPath } from 'd3-geo';
 import { loadProvinceGeo, loadScopeFields } from '../tabs/exploration/data';
 import { gsap, prefersReducedMotion } from './timeline';
 import { INDONESIA_CODES, KUTEI } from './data';
 
 const VB = 100;
 
+/** Natural Earth 50m, clipped to the archipelago by
+ *  scripts/build-indonesia-land.mjs. Module-cached: the lens mounts on one
+ *  slide but React may remount it. */
+let landCache: Promise<GeoJSON.FeatureCollection> | null = null;
+const loadLand = (): Promise<GeoJSON.FeatureCollection> => {
+  landCache ??= fetch(`${import.meta.env.BASE_URL || '/'}world/indonesia-land.geojson`)
+    .then((r) => r.json())
+    .catch(() => ({ type: 'FeatureCollection', features: [] } as GeoJSON.FeatureCollection));
+  return landCache;
+};
+
 interface Ring { d: string; kutei: boolean }
 interface Pt { x: number; y: number; r: number; kutei: boolean }
 interface Stop { x: number; y: number; z: number }
 interface Link { a: Pt; b: Pt }
 interface Lens {
+  /** Coastlines, drawn under everything. */
+  land: string[];
   rings: Ring[]; fields: Pt[]; links: Link[];
   /** Province-to-province arcs for the final stop. */
   arcs: string[];
@@ -37,50 +51,54 @@ function useIndonesia(): Lens | null {
 
   useEffect(() => {
     let live = true;
-    Promise.all([loadProvinceGeo(), loadScopeFields()]).then(([geo, scope]) => {
+    Promise.all([loadProvinceGeo(), loadScopeFields(), loadLand()]).then(([geo, scope, land]) => {
       if (!live) return;
       const codes = new Set<string>(INDONESIA_CODES);
       const feats = geo.features.filter(
         (f) => codes.has(String((f.properties as { prvCode?: string })?.prvCode)));
       if (!feats.length) return;
 
-      // One bbox across the whole archipelago; every stop is expressed inside
-      // this single coordinate space, so zooming is a transform rather than a
-      // re-projection and nothing can drift between stops.
-      const b = { minX: 1e9, maxX: -1e9, minY: 1e9, maxY: -1e9 };
-      const ringsOf = (f: GeoJSON.Feature): number[][][] =>
-        f.geometry.type === 'Polygon' ? [(f.geometry.coordinates as number[][][])[0]]
-          : f.geometry.type === 'MultiPolygon' ? (f.geometry.coordinates as number[][][][]).map((p) => p[0])
-            : [];
-      for (const f of feats) {
-        for (const ring of ringsOf(f)) {
-          for (const [lon, lat] of ring) {
-            b.minX = Math.min(b.minX, lon); b.maxX = Math.max(b.maxX, lon);
-            b.minY = Math.min(b.minY, lat); b.maxY = Math.max(b.maxY, lat);
-          }
-        }
+      // ONE d3 projection for everything in the lens — coastlines, province
+      // outlines and field points. Sharing it is not a style preference: a
+      // second projection, however carefully matched, drifts against the first
+      // the moment either bbox changes, and a coastline half a degree off its
+      // own basin is worse than no coastline.
+      //
+      // Equirectangular because that is what the hand-rolled linear mapping it
+      // replaces already was, so the framing and all four camera stops are
+      // unchanged. fitExtent to the PROVINCE extent, not the land extent: the
+      // subject is the petroleum provinces and the coast is context.
+      const pad = VB * 0.05;
+      const projection = geoEquirectangular().fitExtent(
+        [[pad, pad], [VB - pad, VB - pad]],
+        { type: 'FeatureCollection', features: feats } as GeoJSON.FeatureCollection,
+      );
+      const toPath = geoPath(projection);
+      const px = (lon: number, lat: number): [number, number] => {
+        const q = projection([lon, lat]);
+        return q ? [q[0], q[1]] : [VB / 2, VB / 2];
+      };
+
+      // Coastlines. One path per country keeps the DOM at twenty nodes rather
+      // than one monolith, so a repaint can skip what has not changed.
+      const landPaths: string[] = [];
+      for (const f of land.features) {
+        const d = toPath(f as GeoJSON.Feature);
+        if (d) landPaths.push(d);
       }
-      const w = b.maxX - b.minX, h = b.maxY - b.minY;
-      const s = (VB * 0.9) / Math.max(w, h);
-      const cx = (b.minX + b.maxX) / 2, cy = (b.minY + b.maxY) / 2;
-      const px = (lon: number, lat: number): [number, number] =>
-        [VB / 2 + (lon - cx) * s, VB / 2 - (lat - cy) * s];
 
       const rings: Ring[] = [];
       let kx = 0, ky = 0, kn = 0;
       for (const f of feats) {
         const isK = String((f.properties as { prvCode?: string })?.prvCode) === KUTEI;
-        for (const ring of ringsOf(f)) {
-          // Thin dense coastlines — a 2,000-vertex ring inside a 600px circle
-          // is pure cost and visually identical.
-          const step = Math.max(1, Math.floor(ring.length / 180));
-          let d = '';
-          for (let i = 0; i < ring.length; i += step) {
-            const [x, y] = px(ring[i][0], ring[i][1]);
-            d += `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`;
-            if (isK) { kx += x; ky += y; kn += 1; }
-          }
-          rings.push({ d: `${d}Z`, kutei: isK });
+        const d = toPath(f as GeoJSON.Feature);
+        if (d) rings.push({ d, kutei: isK });
+        if (isK) {
+          // Kutei's screen centroid, from the same projection — the camera's
+          // second stop. geoPath.centroid is area-weighted, which is what we
+          // want for a multipolygon province.
+          const c = toPath.centroid(f as GeoJSON.Feature);
+          if (Number.isFinite(c[0])) { kx = c[0]; ky = c[1]; kn = 1; }
         }
       }
 
@@ -170,7 +188,7 @@ function useIndonesia(): Lens | null {
       }
 
       setLens({
-        rings, fields, links, arcs,
+        land: landPaths, rings, fields, links, arcs,
         stops: [
           { x: VB / 2, y: VB / 2, z: 1 },
           kutei,
@@ -275,6 +293,10 @@ export function BasinLens({
 
   const shapes = useMemo(() => (
     <>
+      {/* Coastlines first: context under the subject, never over it. */}
+      {lens?.land.map((d, i) => (
+        <path key={`n${i}`} className="kn-lens-land" d={d} />
+      ))}
       {lens?.rings.map((r, i) => (
         <path key={`r${i}`} d={r.d} className={'kn-lens-ring' + (r.kutei ? ' on' : '')} />
       ))}

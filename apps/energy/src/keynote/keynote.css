@@ -371,6 +371,14 @@
   background:radial-gradient(circle,color-mix(in srgb,var(--technology) 18%,transparent) 0%,transparent 62%);
   pointer-events:none}
 .kn-lens svg{width:100%;height:100%;display:block;overflow:visible}
+/* Coastlines. Context, not subject: a filled landmass just dark enough to
+   separate island from sea, with a hairline coast. It must never compete with
+   the province outlines drawn on top of it. */
+.kn-lens-land{fill:color-mix(in srgb,#1B2B3E 78%,transparent);
+  stroke:color-mix(in srgb,var(--technology) 22%,transparent);
+  stroke-width:.4px;vector-effect:non-scaling-stroke}
+/* On the unified beat the land warms with everything else. */
+.kn-lens svg .kn-lens-land{fill:color-mix(in srgb,#1B2B3E calc(78% + 12% * var(--unify)),transparent)}
 .kn-lens-ring{fill:none;stroke:color-mix(in srgb,var(--technology) 38%,transparent);
   stroke-width:.7px;vector-effect:non-scaling-stroke}
 /* Kutei is the subject of the descent, so it is the only lit outline. */

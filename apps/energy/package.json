@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "predev": "node scripts/build-data.mjs && node scripts/build-knowledge.mjs && node scripts/build-workbench-data.mjs && node scripts/build-osdu.mjs && node scripts/build-cockpit-spatial.mjs && node scripts/build-master-kb.mjs && node scripts/build-crosswalk.mjs && node scripts/build-gazetteer.mjs",
-    "prebuild": "node scripts/build-data.mjs && node scripts/build-knowledge.mjs && node scripts/build-workbench-data.mjs && node scripts/build-osdu.mjs && node scripts/build-cockpit-spatial.mjs && node scripts/build-master-kb.mjs && node scripts/build-crosswalk.mjs && node scripts/build-gazetteer.mjs",
+    "prebuild": "node scripts/build-data.mjs && node scripts/build-knowledge.mjs && node scripts/build-workbench-data.mjs && node scripts/build-osdu.mjs && node scripts/build-cockpit-spatial.mjs && node scripts/build-master-kb.mjs && node scripts/build-crosswalk.mjs && node scripts/build-gazetteer.mjs && node scripts/build-indonesia-land.mjs",
     "data": "node scripts/build-data.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
@@ -119,7 +119,9 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "topojson-client": "^3.1.0",
     "typescript": "^5.6.3",
-    "vite": "^5.4.11"
+    "vite": "^5.4.11",
+    "world-atlas": "^2.0.2"
   }
 }
