@@ -689,3 +689,86 @@
     background:color-mix(in srgb,var(--bg) 95%,transparent);box-shadow:0 -40px 100px rgb(0 0 0/.5)}
   @keyframes kn-pop-in{from{opacity:0;transform:translateY(34px)}}
 }
+
+/* ══ SLIDE 2 — THE PERSPECTIVE ═══════════════════════════════════════════════
+   Timeline left, donut right. The timeline answers what and when; the donut
+   answers the same fifteen years twice — what the work was, and what kind of
+   institution it happened in. */
+.kn-perspective .kn-why{max-width:74ch}
+.kn-persp-grid{display:grid;grid-template-columns:1fr minmax(300px,30%);
+  gap:calc(var(--gap)*2.2);align-items:start;margin-top:calc(var(--gap)*1.8)}
+.kn-perspective .kn-journey{margin-top:0;width:100%;margin-left:0}
+.kn-perspective .kn-journey-row{grid-template-columns:repeat(10,1fr)}
+/* Environment mode lifts the stages belonging to the hovered arc. Dimming the
+   rest is the cheapest way to say "these are the same career". */
+.kn-jstage{transition:opacity .45s ease}
+.kn-jstage.dim{opacity:.24}
+
+/* Digital Transformation: a band across the later stages, not a final dot. */
+.kn-dt{position:absolute;right:0;bottom:-2px;display:flex;flex-direction:column;gap:5px;
+  pointer-events:none}
+.kn-dt-line{display:block;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--technology) 70%,transparent) 22%,var(--technology));
+  box-shadow:0 0 16px color-mix(in srgb,var(--technology) 45%,transparent)}
+.kn-dt-label{font-size:calc(var(--u)*.58);letter-spacing:.2em;text-transform:uppercase;
+  font-weight:600;color:var(--technology)}
+.kn-dt-note{font-size:calc(var(--u)*.55);color:var(--secondary);line-height:1.3;max-width:44ch}
+.kn-journey{position:relative}
+
+.kn-persp-seg{margin-bottom:calc(var(--gap)*1.1)}
+.kn-persp-close{margin:calc(var(--gap)*2) 0 0;font-size:calc(var(--u)*1.12);
+  font-weight:600;letter-spacing:var(--track-body)}
+
+/* ── the donut ─────────────────────────────────────────────────────────────
+   viewBox + preserveAspectRatio, no fixed pixel geometry: it fits whatever
+   column it is given, on a projector or a phone. */
+.kn-donut{display:flex;flex-direction:column;align-items:center;width:100%}
+.kn-donut svg{width:100%;max-width:280px;height:auto;display:block;overflow:visible}
+.kn-donut-arc{cursor:pointer;outline:none;
+  transition:opacity .3s ease,transform .3s cubic-bezier(.16,1,.3,1);
+  transform-origin:0 0}
+.kn-donut-arc.dim{opacity:.28}
+.kn-donut-arc:hover,.kn-donut-arc:focus-visible{transform:scale(1.035)}
+.kn-donut-arc:focus-visible{stroke:#fff;stroke-width:1.5}
+.kn-donut-big{fill:var(--primary);font-size:34px;font-weight:600;letter-spacing:-.03em}
+.kn-donut-small{fill:var(--secondary);font-size:8.5px;letter-spacing:.16em;
+  text-transform:uppercase}
+.kn-donut-note{margin:calc(var(--gap)*.9) 0 0;text-align:center;min-height:3.2em;
+  font-size:calc(var(--u)*.66);line-height:1.45;color:var(--secondary);max-width:34ch;
+  animation:kn-note-in .4s ease both}
+@keyframes kn-note-in{from{opacity:0}}
+.kn-donut-key{list-style:none;margin:calc(var(--gap)*.8) 0 0;padding:0;
+  display:flex;flex-direction:column;gap:6px;width:100%}
+.kn-donut-key li{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:9px;
+  font-size:calc(var(--u)*.62);color:var(--secondary);cursor:default;
+  transition:opacity .3s ease}
+.kn-donut-key li.dim{opacity:.3}
+.kn-donut-key i{width:9px;height:9px;border-radius:3px}
+.kn-donut-key b{font-family:'JetBrains Mono',monospace;color:var(--primary);
+  font-variant-numeric:tabular-nums}
+
+/* slide 1 — the provenance line under the lede */
+.kn-vision-src{margin:calc(var(--gap)*1.1) 0 0;font-size:calc(var(--u)*.7);
+  color:var(--secondary);opacity:.75;max-width:44ch}
+
+/* slide 5 — the humility line, quieter than the claim above it */
+.kn-humble{opacity:.62;max-width:46ch}
+
+/* slide 6 — the three collective actions */
+.kn-acts{list-style:none;margin:calc(var(--gap)*1.8) 0 0;padding:0;
+  display:flex;flex-direction:column;gap:calc(var(--gap)*1.05)}
+.kn-acts li{display:flex;flex-direction:column;gap:3px;max-width:46ch}
+.kn-acts b{font-size:calc(var(--u)*.68);letter-spacing:.2em;text-transform:uppercase;
+  color:var(--geology);font-weight:600}
+.kn-acts span{font-size:calc(var(--u)*.88);line-height:1.45;color:var(--secondary)}
+
+@media (max-width:1100px){
+  /* Stack: the donut moves under the timeline, legend beneath it. */
+  .kn-persp-grid{grid-template-columns:1fr;gap:calc(var(--gap)*1.6)}
+  .kn-perspective .kn-journey-row{grid-template-columns:repeat(4,1fr);
+    row-gap:calc(var(--gap)*1.4);align-items:start}
+  /* A band pinned to a wrapped row would point at nothing. */
+  .kn-dt{position:relative;left:auto!important;right:auto;bottom:auto;
+    margin-top:calc(var(--gap)*1.4)}
+  .kn-donut svg{max-width:230px}
+}

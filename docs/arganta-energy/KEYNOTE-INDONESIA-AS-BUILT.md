@@ -2,7 +2,7 @@
 
 **For:** Herman Darman — exploration geologist, editor of *An Outline of the
 Geology of Indonesia*, ~20 yrs Shell, advisor to Pertamina.
-**Status:** built and running. Seven scenes, black throughout.
+**Status:** built and running. Six scenes, black throughout.
 **Open at:** Settings → Presentation, or `/#keynote`.
 
 **This file describes the code.** The four planning docs beside it
@@ -29,50 +29,61 @@ they are kept as history and must not be read as a spec.
 
 ---
 
-## The seven scenes
+## The six scenes
 
-| # | id | Scene · Emotion | Punchline | Reused from ArgantaEnergy | Motion |
-|---|---|---|---|---|---|
-| 1 | `vision` | **A Vision** · wonder | *A Vision for Indonesia's Geological Legacy — Proof of Concept based on the USGS World Petroleum Assessment* | `CockpitMap` (Esri satellite, MapLibre v5 globe) · `EventsChartView` + `TectonoStratChart` on click | 5.2 s descent from orbit, west→east basin ignition, field pulse |
-| 2 | `why-here` | **Why I Am Here** · credibility | *Nearly the entire upstream lifecycle.* | — | ten stages on a 2006→2026+ axis, real reversed logos, axis draws left to right |
-| 3 | `mission` | **The Mission** · purpose | *Unify Indonesian petroleum knowledge — then hand it on.* | — | TRAIN / EXPLORE / PUBLISH arrive as three places; the thesis lands alone |
-| 4 | `descent` | **The Descent, and the Idea** · wonder → inspiration | *Every scale is the same question, asked closer.* | `DepthRail` · **`BasinLens`** — the real Kutei polygon and its real fields | two acts in one frame |
-| 5 | `platform` | **The Platform** · confidence | *The training material, the knowledge base, the submissions — all of it lives here.* | **the live app in an iframe** | 1∶3 copy/demo split, iframe at 75 % zoom |
-| 6 | `legacy` | **What It Leaves Behind** · collaboration | *Three things Indonesia keeps.* | `EcosystemForce` (live `d3-force`) | never cools — `alphaMin` 0.008 |
-| 7 | `ask` | **The Ask** · reflection | *They should inherit the way Indonesia understands its geology.* | `CockpitMap` idle | three questions, long holds, no logo after the fade |
+Per `Geological_Legacy_Pitch_Deck_Update_Handoff.md`. Read consecutively the
+headlines are one story: **One Geological Legacy. Connected for the Next
+Generation. → From Basin Understanding to Field Stewardship. → From the Scale of
+a Nation to the Detail of a Field. → Build the Foundation. Challenge the
+Interpretation. Pass It Forward. → The First Proof Is Already Working. →
+Knowledge Endures When It Is Shared.**
 
-### Scene 3 — the mission
+| # | id | Scene | Answers | Built from |
+|---|---|---|---|---|
+| 1 | `vision` | **The Vision** | Why does this matter? | `CockpitMap` globe · Knowledge Bank charts on basin select |
+| 2 | `perspective` | **The Perspective** | Why is the perspective broad enough? | 10-stage timeline + **D3 dual-mode donut** |
+| 3 | `descent` | **The Descent** | What does connected knowledge look like? | `BasinLens` — d3-geo, four stops |
+| 4 | `path` | **The Path Forward** | How does it become trustworthy? | FOUNDATION / VALIDATE / TRANSFER |
+| 5 | `proof` | **The First Proof** | Is it technically possible? | the live app, booted dark |
+| 6 | `next` | **The Next Chapter** | What happens next? | Challenge · Contribute · Carry forward |
 
-**TRAIN** (*foundations · basin thinking · AI as an instrument* → a shared
-curriculum), **EXPLORE** (*choose a basin · interrogate it · defend it* → an
-original interpretation), **PUBLISH** (*present · peer review · record* → a
-citable contribution).
+The ending is deliberately **not** about the person who built it. *"I have taken
+this as far as one person can"* put the builder at the centre of a slide whose
+whole subject is collective continuity.
 
-Footer: **GeoHackathon — one cohort, a basin each, one publication.**
-Closing beat: *We should measure it — not merely claim it.*
+### Slide 2 — the only visual rebuild
 
-The order is the argument: you cannot ask a student to interrogate a basin
-before you have taught them how, and an interpretation nobody reads is not a
-contribution.
+One donut, two readings of the same fifteen years, behind a switchable capsule.
+Side by side you could read either alone; behind one switch they are visibly the
+same career measured twice.
 
-### Scene 4 — the descent
+**Technical mix** is fixed at 25 / 25 / 25 / 10 / 15. Three visual families, not
+a rainbow: the three 25% segments share one blue family because together they
+*are* the 75% development-geoscience story, and the eye should read them as a
+block before it reads them apart.
 
-Nine seconds of silence through five real scales — **Basin** (Kutei 3817) →
-**Play** → **Field** (Tunu) → **Well** → **Core** — with a circular lens at
-centre frame holding the actual Kutei province polygon from
-`world/provinces.geojson` and its actual GOGET field points, zooming as depth
-grows. Stroke width divides by the zoom so the outline stays a hairline instead
-of thickening into a slab.
+**Environment mix is COMPUTED**, not typed — from the timeline's own months, so
+it cannot drift from the dates printed beside it. Two classifications are the
+presenter's call, and are isolated as single lines in `ENVIRONMENT_OF`:
 
-Then Act I lifts into blur and Act II rises in the same grid cell: *an
-understanding, once shared, cannot be taken back.*
+- **North Oil Company** — a QatarEnergy / TotalEnergies joint venture.
+  Defaulted to *national*. Flipping it to *multinational* moves the chart from
+  32 / 21 / 47 to 32 / 53 / 16, so this is not a cosmetic choice.
+- **Energi Mega Persada** — an Indonesian independent, neither a state operator
+  nor a multinational. Defaulted to *national* as the least wrong of three.
 
-### Scene 7 — the ask
+A third judgement worth surfacing: the four-year B.Eng is counted, per the
+handoff's mapping of ITB to Academic & Research. It is 21% of the total on its
+own, and the donut is titled *Professional Environments* — drop it and academic
+falls from 32% to about 15%.
 
-Three printed questions — *is a first cohort worth running? which basin should
-they be given? IAGI, IPA — where should they present it?* The fourth is spoken,
-never printed: **would you sit on the panel that reads what they produce?** An
-ask on the wall reads as a demand; an ask made out loud is a courtesy.
+Digital Transformation is a **band across the later stages, not a final dot**:
+it did not replace the geoscience, it became a way to connect and scale it.
+
+Geometry is `d3-shape`; motion is GSAP, already the deck's engine. Arcs are
+matched by index with surplus segments collapsing to zero width, so five
+segments genuinely morph into three rather than cross-fading. Hovering an arc in
+environment mode dims the timeline stages that do not belong to it.
 
 ---
 
@@ -168,7 +179,7 @@ senior geologist is talking has already lost him.
 | File | Role |
 |---|---|
 | `keynote/KeynoteSurface.tsx` | portal, keys, scene lifecycle, chrome |
-| `keynote/scenes.tsx` | the seven scenes and their `enter`/`idle`/`exit` |
+| `keynote/scenes.tsx` | the six scenes and their `enter`/`idle`/`exit` |
 | `keynote/timeline.ts` | `CINEMA`/`SETTLE` eases, `riseLines` (masked `SplitText`), `hold` |
 | `keynote/KeynoteMap.tsx` | space sky, archipelago glow, field pulse, camera |
 | `keynote/basin-dossier.ts` | province code → Knowledge Bank chart inputs |
